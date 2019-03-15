@@ -6,7 +6,7 @@
     "userHabit": false,
     "api": {
         "protocol": "http",
-        "domain": "www.baidu.com/"
+        "domain": "localhost:3000"
     },
     "query": {
         "screen-xs": {
