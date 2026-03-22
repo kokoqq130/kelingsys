@@ -1,0 +1,7 @@
+interface:
+  display_name: "主文档 PDF 导出"
+  short_description: "把当前项目的柯灵基本信息主文档导出为 PDF。"
+  default_prompt: "在我确认后，使用 $main-doc-pdf-export 把当前的 柯灵基本信息.md 主文档导出为 PDF。"
+
+policy:
+  allow_implicit_invocation: true

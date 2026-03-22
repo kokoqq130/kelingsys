@@ -1,0 +1,7 @@
+interface:
+  display_name: "医疗报告整理"
+  short_description: "对医疗报告做 OCR、重命名，并整理主文档和住院文档。"
+  default_prompt: "使用 $medical-report-organizer 对这个医疗报告文件夹做 OCR、规范命名，并整理主文档与住院专用文档。"
+
+policy:
+  allow_implicit_invocation: true
