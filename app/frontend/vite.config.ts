@@ -18,4 +18,23 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) {
+            return;
+          }
+
+          if (id.includes('@ant-design/plots') || id.includes('@antv')) {
+            return 'charts-vendor';
+          }
+
+          if (id.includes('@ant-design/x-markdown') || id.includes('katex')) {
+            return 'markdown-vendor';
+          }
+        },
+      },
+    },
+  },
 });

@@ -109,7 +109,7 @@ const AppLayout = () => {
                 查询优先的资料工作台
               </Typography.Title>
               <Typography.Text type="secondary">
-                当前阶段先完成目录、接口和页面骨架。
+                已接入真实资料索引，下一步继续补图表和细节联调。
               </Typography.Text>
             </div>
           </Space>

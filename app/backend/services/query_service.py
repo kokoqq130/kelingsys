@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-import json
 import sqlite3
+import json
 
 from config import DATA_ROOT
 
@@ -152,20 +152,23 @@ class QueryService:
     if not keyword.strip():
       return []
 
-    rows = self.connection.execute(
-      """
-      SELECT
-        rowid AS document_id,
-        title,
-        relative_path,
-        snippet(documents_fts, 1, '<mark>', '</mark>', '...', 16) AS snippet
-      FROM documents_fts
-      WHERE documents_fts MATCH ?
-      ORDER BY rank
-      LIMIT 20
-      """,
-      (keyword,),
-    ).fetchall()
+    try:
+      rows = self.connection.execute(
+        """
+        SELECT
+          rowid AS document_id,
+          title,
+          relative_path,
+          snippet(documents_fts, 1, '<mark>', '</mark>', '...', 16) AS snippet
+        FROM documents_fts
+        WHERE documents_fts MATCH ?
+        ORDER BY rank
+        LIMIT 20
+        """,
+        (keyword,),
+      ).fetchall()
+    except sqlite3.OperationalError:
+      rows = []
 
     if not rows:
       rows = self.connection.execute(

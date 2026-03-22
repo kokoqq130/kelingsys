@@ -1,68 +1,155 @@
-import { Card, Col, List, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { App, Button, Card, Col, Descriptions, Empty, List, Row, Space, Statistic, Tag, Typography } from 'antd';
 
+import { medicalApi } from '@/api/medical';
 import StatusBanner from '@/components/StatusBanner';
+import { useApiResource } from '@/hooks/useApiResource';
 
-const milestones = [
-  '主文档与住院文档作为第一事实来源',
-  '后端负责扫描、解析、索引与查询',
-  '前端优先承接总览、时间线、搜索和文档预览',
-];
+const OverviewPage = () => {
+  const { message } = App.useApp();
+  const { data, error, loading, reload } = useApiResource(medicalApi.getOverview, []);
 
-const OverviewPage = () => (
-  <Space direction="vertical" size={20} style={{ width: '100%' }}>
-    <StatusBanner />
-    <Row gutter={[20, 20]}>
-      <Col xs={24} xl={15}>
-        <Card bordered={false}>
-          <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <div>
-              <Typography.Text style={{ color: '#b45c2f', letterSpacing: 2 }}>
-                SYSTEM OVERVIEW
-              </Typography.Text>
-              <Typography.Title level={2} style={{ marginTop: 8 }}>
-                先把真实资料接成一套可查询的网站
-              </Typography.Title>
-              <Typography.Paragraph style={{ fontSize: 16, marginBottom: 0 }}>
-                这套界面会围绕当前项目内的 Markdown、报告图片和 PDF 建索引，不改变你继续通过 AI
-                对话整理资料的方式。
-              </Typography.Paragraph>
-            </div>
+  const handleReindex = async () => {
+    await medicalApi.reindex();
+    message.success('索引已重建');
+    await reload();
+  };
+
+  if (loading) {
+    return <StatusBanner />;
+  }
+
+  if (error || !data) {
+    return (
+      <Card bordered={false}>
+        <Empty description={error || '暂时没有读取到总览数据'} />
+      </Card>
+    );
+  }
+
+  return (
+    <Space direction="vertical" size={20} style={{ width: '100%' }}>
+      <StatusBanner />
+      <Row gutter={[20, 20]}>
+        <Col xs={24} xl={15}>
+          <Card
+            bordered={false}
+            extra={
+              <Button onClick={() => void handleReindex()}>
+                重建索引
+              </Button>
+            }
+          >
+            <Space direction="vertical" size={18} style={{ width: '100%' }}>
+              <div>
+                <Typography.Text style={{ color: '#b45c2f', letterSpacing: 2 }}>
+                  PATIENT OVERVIEW
+                </Typography.Text>
+                <Typography.Title level={2} style={{ marginTop: 8, marginBottom: 10 }}>
+                  {data.patient['姓名']} 的资料总览
+                </Typography.Title>
+                <Typography.Paragraph style={{ fontSize: 16, marginBottom: 0 }}>
+                  {data.current_status}
+                </Typography.Paragraph>
+              </div>
+              <Descriptions column={{ xs: 1, md: 2 }} bordered size="small">
+                {Object.entries(data.patient).map(([key, value]) => (
+                  <Descriptions.Item key={key} label={key}>
+                    {value}
+                  </Descriptions.Item>
+                ))}
+              </Descriptions>
+              <div>
+                <Typography.Title level={5}>主要问题</Typography.Title>
+                <Typography.Paragraph style={{ marginBottom: 0 }}>{data.main_issue}</Typography.Paragraph>
+              </div>
+              <div>
+                <Typography.Title level={5}>主要诊断</Typography.Title>
+                <Space wrap>
+                  {data.diagnoses.map(item => (
+                    <Tag key={item.name} color="processing">
+                      {item.name}
+                    </Tag>
+                  ))}
+                </Space>
+              </div>
+            </Space>
+          </Card>
+        </Col>
+        <Col xs={24} xl={9}>
+          <Row gutter={[20, 20]}>
+            <Col span={12}>
+              <Card bordered={false}>
+                <Statistic title="文件总数" value={data.stats.file_count} />
+              </Card>
+            </Col>
+            <Col span={12}>
+              <Card bordered={false}>
+                <Statistic title="事件总数" value={data.stats.event_count} />
+              </Card>
+            </Col>
+            <Col span={12}>
+              <Card bordered={false}>
+                <Statistic title="文档总数" value={data.stats.document_count} />
+              </Card>
+            </Col>
+            <Col span={12}>
+              <Card bordered={false}>
+                <Statistic title="检查记录" value={data.stats.lab_count} />
+              </Card>
+            </Col>
+          </Row>
+        </Col>
+      </Row>
+      <Row gutter={[20, 20]}>
+        <Col xs={24} xl={12}>
+          <Card bordered={false} title="当前用药">
             <List
-              dataSource={milestones}
+              dataSource={data.current_medications}
               renderItem={item => (
-                <List.Item style={{ paddingInline: 0 }}>
-                  <Tag color="processing">阶段</Tag>
-                  <Typography.Text>{item}</Typography.Text>
+                <List.Item>
+                  <List.Item.Meta
+                    title={
+                      <Space wrap>
+                        <span>{item.name}</span>
+                        <Tag>{item.category}</Tag>
+                      </Space>
+                    }
+                    description={item.dose_text}
+                  />
                 </List.Item>
               )}
             />
-          </Space>
-        </Card>
-      </Col>
-      <Col xs={24} xl={9}>
-        <Row gutter={[20, 20]}>
-          <Col span={12}>
-            <Card bordered={false}>
-              <Statistic title="资料来源" value="Markdown / 图片 / PDF" />
-            </Card>
-          </Col>
-          <Col span={12}>
-            <Card bordered={false}>
-              <Statistic title="当前阶段" value="模块 1" />
-            </Card>
-          </Col>
-          <Col span={24}>
-            <Card bordered={false}>
-              <Typography.Title level={5}>这一轮先完成</Typography.Title>
-              <Typography.Paragraph style={{ marginBottom: 0 }}>
-                前后端目录、主题、路由、后端健康接口和基础页面骨架。
-              </Typography.Paragraph>
-            </Card>
-          </Col>
-        </Row>
-      </Col>
-    </Row>
-  </Space>
-);
+          </Card>
+        </Col>
+        <Col xs={24} xl={12}>
+          <Card bordered={false} title="近期提醒">
+            <Space direction="vertical" size={14} style={{ width: '100%' }}>
+              <div>
+                <Typography.Text strong>最近一次发作</Typography.Text>
+                <Typography.Paragraph style={{ marginBottom: 0 }}>
+                  {data.latest_seizure?.summary || '暂无'}
+                </Typography.Paragraph>
+              </div>
+              <div>
+                <Typography.Text strong>最近一次住院</Typography.Text>
+                <Typography.Paragraph style={{ marginBottom: 0 }}>
+                  {data.latest_admission?.summary || '暂无'}
+                </Typography.Paragraph>
+              </div>
+              <div>
+                <Typography.Text strong>长期重点</Typography.Text>
+                <List
+                  size="small"
+                  dataSource={data.highlights}
+                  renderItem={item => <List.Item style={{ paddingInline: 0 }}>{item}</List.Item>}
+                />
+              </div>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
+    </Space>
+  );
+};
 
 export default OverviewPage;

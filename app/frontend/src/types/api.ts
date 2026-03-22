@@ -1,0 +1,102 @@
+export interface HealthResponse {
+  status: string;
+  service: string;
+  project_root: string;
+  indexed_at: string;
+}
+
+export interface DiagnosisItem {
+  name: string;
+  diagnosed_at?: string;
+}
+
+export interface MedicationItem {
+  name: string;
+  category: string;
+  dose_text: string;
+  route?: string | null;
+  frequency?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  is_current: boolean;
+  note?: string | null;
+}
+
+export interface EventItem {
+  id: number;
+  event_date: string;
+  event_date_text: string;
+  event_time_text?: string | null;
+  event_type: string;
+  title: string;
+  summary: string;
+  detail_text: string;
+  is_hospitalized: number;
+  relative_path: string;
+  raw_url?: string | null;
+}
+
+export interface LabItem {
+  id: number;
+  result_date: string;
+  result_date_text: string;
+  test_group: string;
+  test_name: string;
+  result_text: string;
+  numeric_value?: number | null;
+  unit?: string | null;
+  status: string;
+  is_approximate: number;
+  relative_path: string;
+  raw_url?: string | null;
+}
+
+export interface DocumentItem {
+  id: number;
+  doc_kind: string;
+  title: string;
+  relative_path: string;
+  raw_url?: string | null;
+}
+
+export interface DocumentDetail extends DocumentItem {
+  content_text: string;
+  related_files: Array<{
+    relative_path: string;
+    relation_type: string;
+    raw_url?: string | null;
+  }>;
+}
+
+export interface SearchItem {
+  document_id: number;
+  title: string;
+  relative_path: string;
+  snippet: string;
+  raw_url?: string | null;
+}
+
+export interface OverviewResponse {
+  patient: Record<string, string>;
+  main_issue: string;
+  current_status: string;
+  diagnoses: DiagnosisItem[];
+  highlights: string[];
+  current_medications: MedicationItem[];
+  latest_seizure?: {
+    event_date: string;
+    event_date_text: string;
+    summary: string;
+  } | null;
+  latest_admission?: {
+    event_date: string;
+    event_date_text: string;
+    summary: string;
+  } | null;
+  stats: {
+    file_count: number;
+    document_count: number;
+    event_count: number;
+    lab_count: number;
+  };
+}

@@ -1,36 +1,10 @@
 import { Alert, Button, Space } from 'antd';
-import { useEffect, useState } from 'react';
 
-import { apiGet } from '@/api/client';
-
-interface HealthResponse {
-  status: string;
-  service: string;
-  project_root: string;
-}
+import { medicalApi } from '@/api/medical';
+import { useApiResource } from '@/hooks/useApiResource';
 
 const StatusBanner = () => {
-  const [health, setHealth] = useState<HealthResponse | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const loadHealth = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const result = await apiGet<HealthResponse>('/api/health');
-      setHealth(result);
-    } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : '未知错误');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    void loadHealth();
-  }, []);
+  const { data: health, error, loading, reload } = useApiResource(medicalApi.getHealth, []);
 
   if (loading) {
     return <Alert type="info" message="正在检查后端服务状态..." showIcon />;
@@ -45,7 +19,7 @@ const StatusBanner = () => {
         description={
           <Space direction="vertical" size={8}>
             <span>{error}</span>
-            <Button size="small" onClick={() => void loadHealth()}>
+            <Button size="small" onClick={() => void reload()}>
               重新检查
             </Button>
           </Space>
@@ -59,7 +33,7 @@ const StatusBanner = () => {
       type="success"
       showIcon
       message="后端基础服务已连通"
-      description={`${health?.service} · 项目根目录：${health?.project_root}`}
+      description={`${health?.service} · 索引时间：${health?.indexed_at || '未记录'}`}
     />
   );
 };

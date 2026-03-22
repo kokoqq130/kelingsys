@@ -1,4 +1,4 @@
-import { ConfigProvider, theme } from 'antd';
+import { App as AntdApp, ConfigProvider, theme } from 'antd';
 import { PropsWithChildren } from 'react';
 import { ThemeProvider as StyledThemeProvider } from 'styled-components';
 
@@ -14,10 +14,12 @@ const ThemeProvider = ({ children }: PropsWithChildren) => (
       ...appTheme,
     }}
   >
-    <StyledThemeProvider theme={{ customColors }}>
-      <GlobalStyles customColors={customColors} />
-      {children}
-    </StyledThemeProvider>
+    <AntdApp>
+      <StyledThemeProvider theme={{ customColors }}>
+        <GlobalStyles customColors={customColors} />
+        {children}
+      </StyledThemeProvider>
+    </AntdApp>
   </ConfigProvider>
 );
 
