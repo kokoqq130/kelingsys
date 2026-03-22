@@ -20,6 +20,7 @@ export interface MedicationItem {
   end_date?: string | null;
   is_current: boolean;
   note?: string | null;
+  raw_url?: string | null;
 }
 
 export interface EventItem {
@@ -59,6 +60,15 @@ export interface DocumentItem {
   raw_url?: string | null;
 }
 
+export interface FileItem {
+  id: number;
+  relative_path: string;
+  file_name: string;
+  file_type: string;
+  updated_at: string;
+  raw_url?: string | null;
+}
+
 export interface DocumentDetail extends DocumentItem {
   content_text: string;
   related_files: Array<{
@@ -73,6 +83,16 @@ export interface SearchItem {
   title: string;
   relative_path: string;
   snippet: string;
+  raw_url?: string | null;
+}
+
+export interface MedicationAdjustmentItem {
+  id: number;
+  event_date: string;
+  event_date_text: string;
+  summary: string;
+  detail_text: string;
+  relative_path: string;
   raw_url?: string | null;
 }
 
@@ -99,4 +119,9 @@ export interface OverviewResponse {
     event_count: number;
     lab_count: number;
   };
+}
+
+export interface MedicationsResponse {
+  current: MedicationItem[];
+  adjustments: MedicationAdjustmentItem[];
 }

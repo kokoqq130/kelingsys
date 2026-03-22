@@ -62,6 +62,12 @@ def labs() -> list[dict]:
         return QueryService(connection).get_lab_groups()
 
 
+@app.get("/api/medications")
+def medications() -> dict:
+    with get_connection() as connection:
+        return QueryService(connection).get_medications()
+
+
 @app.get("/api/documents")
 def documents() -> list[dict]:
     with get_connection() as connection:

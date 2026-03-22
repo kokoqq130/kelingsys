@@ -20,12 +20,20 @@ export const router = createBrowserRouter([
         lazy: async () => ({ Component: (await import('@/pages/TimelinePage')).default }),
       },
       {
+        path: 'medications',
+        lazy: async () => ({ Component: (await import('@/pages/MedicationsPage')).default }),
+      },
+      {
         path: 'labs',
         lazy: async () => ({ Component: (await import('@/pages/LabsPage')).default }),
       },
       {
         path: 'documents',
         lazy: async () => ({ Component: (await import('@/pages/DocumentsPage')).default }),
+      },
+      {
+        path: 'files',
+        lazy: async () => ({ Component: (await import('@/pages/FilesPage')).default }),
       },
       {
         path: 'search',

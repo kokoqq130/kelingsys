@@ -104,6 +104,52 @@ class QueryService:
     ).fetchall()
     return [dict(row) | {"raw_url": self._raw_url(row["relative_path"])} for row in rows]
 
+  def get_medications(self) -> dict:
+    current_rows = self.connection.execute(
+      """
+      SELECT
+        m.id,
+        m.name,
+        m.category,
+        m.dose_text,
+        m.route,
+        m.frequency,
+        m.start_date,
+        m.end_date,
+        m.is_current,
+        m.note,
+        f.relative_path
+      FROM medications m
+      JOIN documents d ON d.id = m.source_document_id
+      JOIN files f ON f.id = d.file_id
+      ORDER BY m.category, m.name
+      """
+    ).fetchall()
+
+    adjustment_rows = self.connection.execute(
+      """
+      SELECT
+        e.id,
+        e.event_date,
+        e.event_date_text,
+        e.summary,
+        e.detail_text,
+        f.relative_path
+      FROM events e
+      JOIN files f ON f.id = e.source_file_id
+      WHERE e.event_type = 'medication_adjustment'
+      ORDER BY e.event_date DESC, e.id DESC
+      """
+    ).fetchall()
+
+    return {
+      "current": [dict(row) | {"raw_url": self._raw_url(row["relative_path"])} for row in current_rows],
+      "adjustments": [
+        dict(row) | {"raw_url": self._raw_url(row["relative_path"])}
+        for row in adjustment_rows
+      ],
+    }
+
   def get_documents(self) -> list[dict]:
     rows = self.connection.execute(
       """

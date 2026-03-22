@@ -1,8 +1,10 @@
 import {
   ClockCircleOutlined,
+  FolderOpenOutlined,
   FileTextOutlined,
   FundOutlined,
   HomeOutlined,
+  MedicineBoxOutlined,
   MenuOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
@@ -45,8 +47,10 @@ const ContentWrap = styled(Content)`
 const menuItems = [
   { key: '/', icon: <HomeOutlined />, label: <Link to="/">总览</Link> },
   { key: '/timeline', icon: <ClockCircleOutlined />, label: <Link to="/timeline">时间线</Link> },
+  { key: '/medications', icon: <MedicineBoxOutlined />, label: <Link to="/medications">用药变化</Link> },
   { key: '/labs', icon: <FundOutlined />, label: <Link to="/labs">检查结果</Link> },
   { key: '/documents', icon: <FileTextOutlined />, label: <Link to="/documents">文档资料</Link> },
+  { key: '/files', icon: <FolderOpenOutlined />, label: <Link to="/files">原始文件</Link> },
   { key: '/search', icon: <SearchOutlined />, label: <Link to="/search">搜索</Link> },
 ];
 
@@ -109,7 +113,7 @@ const AppLayout = () => {
                 查询优先的资料工作台
               </Typography.Title>
               <Typography.Text type="secondary">
-                已接入真实资料索引，下一步继续补图表和细节联调。
+                已接入真实资料索引、调药时间轴和原始文件浏览。
               </Typography.Text>
             </div>
           </Space>

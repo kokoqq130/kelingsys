@@ -488,6 +488,20 @@ def _parse_main_summary(document: DocumentRecord) -> dict[str, list[dict] | dict
             "is_hospitalized": "住院" in summary,
           }
         )
+        medication_names = _extract_medication_names(summary)
+        if medication_names and any(keyword in summary for keyword in ["加", "减", "开始", "停", "调整", "完全减完"]):
+          events.append(
+            {
+              "event_date": event_date,
+              "event_date_text": date_text,
+              "event_time_text": None,
+              "event_type": "medication_adjustment",
+              "title": "调药",
+              "summary": summary,
+              "detail_text": "涉及药物：" + "、".join(medication_names),
+              "is_hospitalized": "住院" in summary,
+            }
+          )
 
     elif section == "medications":
       if plain.startswith("- ") and plain.endswith("：") and "治疗" in plain:
@@ -697,3 +711,19 @@ def _format_display_date(iso_date: str) -> str:
 def _extract_time_text(text: str) -> str | None:
   time_match = re.search(r"(\d{1,2}点(?:\d{1,2}分)?)", text)
   return time_match.group(1) if time_match else None
+
+
+def _extract_medication_names(text: str) -> list[str]:
+  known_names = [
+    "羟钴胺",
+    "左卡尼汀",
+    "亚叶酸钙",
+    "妥泰",
+    "托吡酯",
+    "拉考沙胺",
+    "左乙拉西坦",
+    "吡仑帕奈",
+    "甜菜碱",
+    "地西泮",
+  ]
+  return [name for name in known_names if name in text]

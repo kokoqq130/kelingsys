@@ -28,6 +28,13 @@ class QueryServiceTests(unittest.TestCase):
       summaries = [item["summary"] for item in timeline]
       self.assertTrue(any("呕吐" in summary for summary in summaries))
 
+  def test_medication_adjustments_detected(self) -> None:
+    with get_connection() as connection:
+      service = QueryService(connection)
+      medications = service.get_medications()
+      self.assertGreaterEqual(len(medications["current"]), 1)
+      self.assertGreaterEqual(len(medications["adjustments"]), 1)
+
   def test_search_finds_diazepam_keyword(self) -> None:
     with get_connection() as connection:
       service = QueryService(connection)
