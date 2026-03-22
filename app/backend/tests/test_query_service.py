@@ -27,6 +27,7 @@ class QueryServiceTests(unittest.TestCase):
       timeline = service.get_timeline()
       summaries = [item["summary"] for item in timeline]
       self.assertTrue(any("呕吐" in summary for summary in summaries))
+      self.assertTrue(any(item["event_type"] == "lab" for item in timeline))
 
   def test_medication_adjustments_detected(self) -> None:
     with get_connection() as connection:

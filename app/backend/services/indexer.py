@@ -648,6 +648,24 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
       }
     )
 
+  if labs:
+    abnormal_labs = [lab["test_name"] for lab in labs if lab["status"] in {"high", "low"}]
+    summary = f"本次住院共整理 {len(labs)} 项检查结果"
+    if abnormal_labs:
+      summary += "，其中需要重点关注：" + "、".join(abnormal_labs[:4])
+    events.append(
+      {
+        "event_date": admission_date,
+        "event_date_text": admission_date_text,
+        "event_time_text": None,
+        "event_type": "lab",
+        "title": "本次住院检查汇总",
+        "summary": summary,
+        "detail_text": "；".join(lab["test_name"] for lab in labs),
+        "is_hospitalized": True,
+      }
+    )
+
   return {"overview": None, "events": events, "medications": [], "lab_results": labs}
 
 

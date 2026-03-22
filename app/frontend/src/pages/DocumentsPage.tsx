@@ -1,11 +1,12 @@
-import { Button, Card, Empty, List, Space, Typography } from 'antd';
-import { useEffect, useState } from 'react';
+import { Button, Card, Empty, Input, List, Space, Tree, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import { XMarkdown } from '@ant-design/x-markdown';
+import { useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 
 import { medicalApi } from '@/api/medical';
 import { useApiResource } from '@/hooks/useApiResource';
-import type { DocumentDetail } from '@/types/api';
+import type { DocumentDetail, DocumentItem } from '@/types/api';
 import { rewriteMarkdownLinks } from '@/utils/markdown';
 
 const DocumentLayout = styled.div`
@@ -19,18 +20,36 @@ const DocumentLayout = styled.div`
   }
 `;
 
+const kindLabelMap: Record<string, string> = {
+  main_summary: '主文档',
+  admission_note: '住院整理',
+  report_index: '报告索引',
+  other: '其他文档',
+};
+
 const DocumentsPage = () => {
   const { data: documents, error, loading } = useApiResource(medicalApi.getDocuments, []);
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
   const [detail, setDetail] = useState<DocumentDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [keyword, setKeyword] = useState('');
 
   useEffect(() => {
+    const queryDocumentId = searchParams.get('documentId');
+    if (queryDocumentId) {
+      const nextId = Number(queryDocumentId);
+      if (!Number.isNaN(nextId) && nextId !== selectedDocumentId) {
+        setSelectedDocumentId(nextId);
+      }
+      return;
+    }
+
     if (!documents?.length || selectedDocumentId) {
       return;
     }
     setSelectedDocumentId(documents[0].id);
-  }, [documents, selectedDocumentId]);
+  }, [documents, searchParams, selectedDocumentId]);
 
   useEffect(() => {
     if (!selectedDocumentId) {
@@ -44,6 +63,34 @@ const DocumentsPage = () => {
       .finally(() => setDetailLoading(false));
   }, [selectedDocumentId]);
 
+  const treeData = useMemo(() => {
+    const keywordText = keyword.trim();
+    const grouped = new Map<string, DocumentItem[]>();
+
+    for (const document of documents ?? []) {
+      const matchesKeyword =
+        keywordText.length === 0
+          ? true
+          : `${document.title} ${document.relative_path}`.includes(keywordText);
+      if (!matchesKeyword) {
+        continue;
+      }
+      const bucket = grouped.get(document.doc_kind) ?? [];
+      bucket.push(document);
+      grouped.set(document.doc_kind, bucket);
+    }
+
+    return Array.from(grouped.entries()).map(([kind, items]) => ({
+      key: `kind-${kind}`,
+      title: `${kindLabelMap[kind] || kind} (${items.length})`,
+      selectable: false,
+      children: items.map(item => ({
+        key: String(item.id),
+        title: item.title,
+      })),
+    }));
+  }, [documents, keyword]);
+
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
       <div>
@@ -56,22 +103,26 @@ const DocumentsPage = () => {
         <Card bordered={false} loading={loading} style={{ minHeight: 640 }}>
           {error ? <Empty description={error} /> : null}
           {!error ? (
-            <List
-              dataSource={documents ?? []}
-              renderItem={item => (
-                <List.Item
-                  onClick={() => setSelectedDocumentId(item.id)}
-                  style={{
-                    cursor: 'pointer',
-                    paddingInline: 8,
-                    borderRadius: 12,
-                    background: item.id === selectedDocumentId ? 'rgba(46,106,106,0.08)' : 'transparent',
-                  }}
-                >
-                  <List.Item.Meta title={item.title} description={item.relative_path} />
-                </List.Item>
-              )}
-            />
+            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+              <Input
+                value={keyword}
+                onChange={event => setKeyword(event.target.value)}
+                placeholder="筛选文档标题或路径"
+              />
+              <Tree
+                treeData={treeData}
+                selectedKeys={selectedDocumentId ? [String(selectedDocumentId)] : []}
+                onSelect={keys => {
+                  const nextKey = keys[0];
+                  if (nextKey) {
+                    const nextId = Number(nextKey);
+                    setSelectedDocumentId(nextId);
+                    setSearchParams({ documentId: String(nextId) });
+                  }
+                }}
+                defaultExpandAll
+              />
+            </Space>
           ) : null}
         </Card>
         <Card bordered={false} loading={detailLoading} style={{ minHeight: 640 }}>

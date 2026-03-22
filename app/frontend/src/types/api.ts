@@ -11,6 +11,8 @@ export interface DiagnosisItem {
 }
 
 export interface MedicationItem {
+  id?: number;
+  document_id?: number;
   name: string;
   category: string;
   dose_text: string;
@@ -25,6 +27,7 @@ export interface MedicationItem {
 
 export interface EventItem {
   id: number;
+  source_document_id: number;
   event_date: string;
   event_date_text: string;
   event_time_text?: string | null;
@@ -86,8 +89,24 @@ export interface SearchItem {
   raw_url?: string | null;
 }
 
+export interface CountStatItem {
+  event_type?: string;
+  file_type?: string;
+  doc_kind?: string;
+  count: number;
+}
+
+export interface AbnormalLabItem {
+  result_date: string;
+  result_date_text: string;
+  test_name: string;
+  result_text: string;
+  status: string;
+}
+
 export interface MedicationAdjustmentItem {
   id: number;
+  document_id: number;
   event_date: string;
   event_date_text: string;
   summary: string;
@@ -119,6 +138,10 @@ export interface OverviewResponse {
     event_count: number;
     lab_count: number;
   };
+  event_type_stats: CountStatItem[];
+  file_type_stats: CountStatItem[];
+  document_kind_stats: CountStatItem[];
+  abnormal_labs: AbnormalLabItem[];
 }
 
 export interface MedicationsResponse {

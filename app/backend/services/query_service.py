@@ -54,11 +54,57 @@ class QueryService:
       """
     ).fetchone()
 
+    event_type_stats = self.connection.execute(
+      """
+      SELECT event_type, COUNT(*) AS count
+      FROM events
+      GROUP BY event_type
+      ORDER BY count DESC, event_type
+      """
+    ).fetchall()
+
+    file_type_stats = self.connection.execute(
+      """
+      SELECT file_type, COUNT(*) AS count
+      FROM files
+      GROUP BY file_type
+      ORDER BY count DESC, file_type
+      """
+    ).fetchall()
+
+    document_kind_stats = self.connection.execute(
+      """
+      SELECT doc_kind, COUNT(*) AS count
+      FROM documents
+      GROUP BY doc_kind
+      ORDER BY count DESC, doc_kind
+      """
+    ).fetchall()
+
+    abnormal_labs = self.connection.execute(
+      """
+      SELECT
+        result_date,
+        result_date_text,
+        test_name,
+        result_text,
+        status
+      FROM lab_results
+      WHERE status IN ('high', 'low')
+      ORDER BY result_date DESC, id DESC
+      LIMIT 8
+      """
+    ).fetchall()
+
     return {
       **overview,
       "latest_seizure": dict(latest_seizure) if latest_seizure else None,
       "latest_admission": dict(latest_admission) if latest_admission else None,
       "stats": dict(stats) if stats else {},
+      "event_type_stats": [dict(row) for row in event_type_stats],
+      "file_type_stats": [dict(row) for row in file_type_stats],
+      "document_kind_stats": [dict(row) for row in document_kind_stats],
+      "abnormal_labs": [dict(row) for row in abnormal_labs],
     }
 
   def get_timeline(self) -> list[dict]:
@@ -66,6 +112,7 @@ class QueryService:
       """
       SELECT
         e.id,
+        e.source_document_id,
         e.event_date,
         e.event_date_text,
         e.event_time_text,
@@ -109,6 +156,7 @@ class QueryService:
       """
       SELECT
         m.id,
+        d.id AS document_id,
         m.name,
         m.category,
         m.dose_text,
@@ -130,6 +178,7 @@ class QueryService:
       """
       SELECT
         e.id,
+        e.source_document_id AS document_id,
         e.event_date,
         e.event_date_text,
         e.summary,
@@ -219,7 +268,7 @@ class QueryService:
     if not rows:
       rows = self.connection.execute(
         """
-        SELECT
+      SELECT
           d.id AS document_id,
           d.title,
           f.relative_path,

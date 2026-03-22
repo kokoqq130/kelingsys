@@ -1,8 +1,28 @@
-import { App, Button, Card, Col, Descriptions, Empty, List, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { Alert, App, Button, Card, Col, Descriptions, Empty, List, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
 
 import { medicalApi } from '@/api/medical';
 import StatusBanner from '@/components/StatusBanner';
 import { useApiResource } from '@/hooks/useApiResource';
+
+function resolveEventTypeLabel(value?: string): string {
+  const map: Record<string, string> = {
+    seizure: '发作',
+    admission: '住院',
+    medication_adjustment: '调药',
+    lab: '检查',
+  };
+  return map[value || ''] || value || '其他';
+}
+
+function resolveDocumentKindLabel(value?: string): string {
+  const map: Record<string, string> = {
+    main_summary: '主文档',
+    admission_note: '住院整理',
+    report_index: '报告索引',
+    other: '其他',
+  };
+  return map[value || ''] || value || '其他';
+}
 
 const OverviewPage = () => {
   const { message } = App.useApp();
@@ -144,6 +164,74 @@ const OverviewPage = () => {
                   renderItem={item => <List.Item style={{ paddingInline: 0 }}>{item}</List.Item>}
                 />
               </div>
+            </Space>
+          </Card>
+        </Col>
+      </Row>
+      <Row gutter={[20, 20]}>
+        <Col xs={24} xl={8}>
+          <Card bordered={false} title="事件结构">
+            <Space direction="vertical" size={14} style={{ width: '100%' }}>
+              {data.event_type_stats.map(item => (
+                <div key={item.event_type}>
+                  <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Typography.Text>{resolveEventTypeLabel(item.event_type)}</Typography.Text>
+                    <Typography.Text type="secondary">{item.count}</Typography.Text>
+                  </Space>
+                  <Progress
+                    percent={Math.round((item.count / Math.max(data.stats.event_count, 1)) * 100)}
+                    showInfo={false}
+                    strokeColor="#2e6a6a"
+                  />
+                </div>
+              ))}
+            </Space>
+          </Card>
+        </Col>
+        <Col xs={24} xl={8}>
+          <Card bordered={false} title="资料结构">
+            <Space direction="vertical" size={14} style={{ width: '100%' }}>
+              {data.file_type_stats.map(item => (
+                <div key={item.file_type}>
+                  <Space style={{ width: '100%', justifyContent: 'space-between' }}>
+                    <Typography.Text>{item.file_type}</Typography.Text>
+                    <Typography.Text type="secondary">{item.count}</Typography.Text>
+                  </Space>
+                  <Progress
+                    percent={Math.round((item.count / Math.max(data.stats.file_count, 1)) * 100)}
+                    showInfo={false}
+                    strokeColor="#b45c2f"
+                  />
+                </div>
+              ))}
+              <List
+                size="small"
+                dataSource={data.document_kind_stats}
+                renderItem={item => (
+                  <List.Item style={{ paddingInline: 0 }}>
+                    {resolveDocumentKindLabel(item.doc_kind)}：{item.count}
+                  </List.Item>
+                )}
+              />
+            </Space>
+          </Card>
+        </Col>
+        <Col xs={24} xl={8}>
+          <Card bordered={false} title="近期异常检查">
+            <Space direction="vertical" size={12} style={{ width: '100%' }}>
+              {data.abnormal_labs.length > 0 ? (
+                data.abnormal_labs.map(item => (
+                  <Alert
+                    key={`${item.result_date}-${item.test_name}`}
+                    type={item.status === 'high' ? 'warning' : 'info'}
+                    showIcon
+                    message={`${item.result_date_text || item.result_date} · ${item.test_name}`}
+                    description={item.result_text}
+                  />
+                ))
+              ) : (
+                <Empty description="当前没有重点异常检查摘要" />
+              )}
             </Space>
           </Card>
         </Col>

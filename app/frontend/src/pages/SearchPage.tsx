@@ -1,5 +1,6 @@
 import { Button, Card, Empty, Input, List, Space, Typography } from 'antd';
 import { useDeferredValue, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import { medicalApi } from '@/api/medical';
 import type { SearchItem } from '@/types/api';
@@ -49,6 +50,9 @@ const SearchPage = () => {
               renderItem={item => (
                 <List.Item
                   actions={[
+                    <Link key="doc" to={`/documents?documentId=${item.document_id}`}>
+                      文档页查看
+                    </Link>,
                     item.raw_url ? (
                       <Button key="open" type="link" href={item.raw_url} target="_blank">
                         打开原文
