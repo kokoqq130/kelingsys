@@ -45,6 +45,7 @@ export interface LabItem {
   result_date: string;
   result_date_text: string;
   test_group: string;
+  panel_name: string;
   test_name: string;
   result_text: string;
   numeric_value?: number | null;

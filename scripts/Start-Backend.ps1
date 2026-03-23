@@ -12,7 +12,7 @@ $setupScript = Join-Path $projectRoot 'scripts\Setup-Backend.ps1'
 $pythonPath = Join-Path $backendRoot '.venv\Scripts\python.exe'
 
 if (-not (Test-Path $setupScript)) {
-  throw "未找到后端初始化脚本，请先检查 $setupScript"
+  throw "Backend setup script not found: $setupScript"
 }
 
 & $setupScript

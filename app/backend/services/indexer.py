@@ -15,6 +15,9 @@ from config import DATA_ROOT, INDEX_DB_PATH, PROJECT_ROOT
 DATE_RE = re.compile(r"(?P<year>\d{4})年(?P<month>\d{1,2})月(?:(?P<day>\d{1,2})日)?")
 NUMBER_RE = re.compile(r"(?P<number>-?\d+(?:\.\d+)?)\s*(?P<unit>[A-Za-zµ/%·/\u4e00-\u9fff]+)?")
 LINK_RE = re.compile(r"!\[[^\]]*]\((?P<path>[^)]+)\)|\[[^\]]*]\((?P<path_text>[^)]+)\)")
+METRIC_CHUNK_SPLIT_RE = re.compile(r"[，,；。]")
+GENERIC_METRIC_NAMES = {"结果", "数值", "值"}
+DERIVED_METRIC_SUFFIXES = ("比例", "绝对值")
 
 
 @dataclass
@@ -130,14 +133,15 @@ def rebuild_index() -> None:
         connection.execute(
           """
           INSERT INTO lab_results (
-            result_date, result_date_text, test_group, test_name, result_text,
+            result_date, result_date_text, test_group, panel_name, test_name, result_text,
             numeric_value, unit, status, is_approximate, source_document_id, source_file_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           """,
           (
             lab["result_date"],
             lab["result_date_text"],
             lab["test_group"],
+            lab["panel_name"],
             lab["test_name"],
             lab["result_text"],
             lab.get("numeric_value"),
@@ -239,11 +243,14 @@ def _create_schema(connection: sqlite3.Connection) -> None:
       source_document_id INTEGER NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS lab_results (
+    DROP TABLE IF EXISTS lab_results;
+
+    CREATE TABLE lab_results (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       result_date TEXT,
       result_date_text TEXT,
       test_group TEXT NOT NULL,
+      panel_name TEXT NOT NULL,
       test_name TEXT NOT NULL,
       result_text TEXT NOT NULL,
       numeric_value REAL,
@@ -533,6 +540,18 @@ def _parse_main_summary(document: DocumentRecord) -> dict[str, list[dict] | dict
         overview["highlights"].append(plain[2:].strip())
       elif plain.startswith("- ") and indent > 0 and current_history_date:
         result_line = plain[2:].strip()
+        panel_name = re.split(r"[：:]", result_line, maxsplit=1)[0].strip() or result_line
+        lab_results.extend(
+          _build_lab_records(
+            test_group="长期参考",
+            panel_name=panel_name,
+            result_lines=[result_line],
+            result_date=current_history_date,
+            result_date_text=_format_display_date(current_history_date),
+            is_approximate=False,
+          )
+        )
+        continue
         lab_record = _build_lab_record(
           test_group="长期参考",
           test_name=result_line.split("：", 1)[0].strip(),
@@ -571,6 +590,20 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
     nonlocal current_lab_name, current_lab_details
     if not current_lab_name:
       return
+    result_text = "；".join(current_lab_details)
+    labs.extend(
+      _build_lab_records(
+        test_group="本次住院",
+        panel_name=current_lab_name,
+        result_lines=current_lab_details,
+        result_date=admission_date,
+        result_date_text=admission_date_text,
+        is_approximate="约" in result_text,
+      )
+    )
+    current_lab_name = ""
+    current_lab_details = []
+    return
     result_text = "；".join(current_lab_details)
     lab_record = _build_lab_record(
       test_group="本次住院",
@@ -675,9 +708,120 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
   return {"overview": None, "events": events, "medications": [], "lab_results": labs}
 
 
+def _build_lab_records(
+  *,
+  test_group: str,
+  panel_name: str,
+  result_lines: list[str],
+  result_date: str,
+  result_date_text: str,
+  is_approximate: bool,
+) -> list[dict]:
+  records: list[dict] = []
+
+  for result_line in result_lines:
+    metrics = _extract_lab_metrics(panel_name, result_line)
+    for metric in metrics:
+      lab_record = _build_lab_record(
+        test_group=test_group,
+        panel_name=panel_name,
+        test_name=metric["test_name"],
+        result_text=metric["result_text"],
+        result_date=result_date,
+        result_date_text=result_date_text,
+        is_approximate=is_approximate or metric["is_approximate"],
+      )
+      if lab_record:
+        records.append(lab_record)
+
+  if records:
+    return records
+
+  fallback_text = "；".join(result_lines)
+  if NUMBER_RE.search(fallback_text):
+    fallback_record = _build_lab_record(
+      test_group=test_group,
+      panel_name=panel_name,
+      test_name=panel_name,
+      result_text=fallback_text,
+      result_date=result_date,
+      result_date_text=result_date_text,
+      is_approximate=is_approximate,
+    )
+    if fallback_record:
+      records.append(fallback_record)
+
+  return records
+
+
+def _extract_lab_metrics(panel_name: str, result_text: str) -> list[dict[str, str | bool]]:
+  plain_text = _plain_text(result_text)
+  metrics: list[dict[str, str | bool]] = []
+  current_subject = ""
+
+  for chunk in METRIC_CHUNK_SPLIT_RE.split(plain_text):
+    for segment in chunk.split("、"):
+      cleaned = _clean_metric_segment(segment)
+      if not cleaned:
+        continue
+
+      match = re.search(
+        r"(?P<name>[A-Za-z][A-Za-z0-9/+%-]*|[\u4e00-\u9fffA-Za-z0-9/+%-]+?)\s*(?:约|为|:|：)\s*(?P<number>-?\d+(?:\.\d+)?)\s*(?P<unit>[A-Za-zµ/%·/\u4e00-\u9fff]+)?",
+        cleaned,
+      )
+      if not match:
+        continue
+
+      metric_name = _normalize_metric_name(match.group("name").strip(), panel_name, current_subject)
+      current_subject = _derive_metric_subject(metric_name, panel_name, current_subject)
+      metric_text = cleaned
+      if metric_name != match.group("name").strip():
+        metric_text = f"{metric_name}{cleaned[match.end('name'):]}"
+      metrics.append(
+        {
+          "test_name": metric_name,
+          "result_text": metric_text,
+          "is_approximate": "约" in cleaned,
+        }
+      )
+
+  return metrics
+
+
+def _clean_metric_segment(segment: str) -> str:
+  cleaned = _plain_text(segment).strip()
+  cleaned = re.sub(
+    r"^(?:OCR可辨识结果包括|OCR可识别结果包括|OCR识别结果包括|可辨识结果包括|可识别结果包括|识别结果包括|包括|其中)[:：]\s*",
+    "",
+    cleaned,
+  )
+  return cleaned.strip()
+
+
+def _normalize_metric_name(name: str, panel_name: str, current_subject: str) -> str:
+  normalized = name.strip().strip("：:")
+  if normalized in GENERIC_METRIC_NAMES:
+    return panel_name
+  if normalized in DERIVED_METRIC_SUFFIXES and current_subject:
+    return f"{current_subject}{normalized}"
+  return normalized
+
+
+def _derive_metric_subject(metric_name: str, panel_name: str, current_subject: str) -> str:
+  if metric_name == panel_name:
+    return current_subject
+
+  for suffix in DERIVED_METRIC_SUFFIXES:
+    if metric_name.endswith(suffix) and len(metric_name) > len(suffix):
+      return metric_name[: -len(suffix)]
+
+  return metric_name
+
+
 def _build_lab_record(
   *,
   test_group: str,
+  panel_name: str | None = None,
   test_name: str,
   result_text: str,
   result_date: str,
@@ -693,6 +837,7 @@ def _build_lab_record(
     "result_date": result_date,
     "result_date_text": result_date_text,
     "test_group": test_group,
+    "panel_name": panel_name or test_name,
     "test_name": test_name,
     "result_text": result_text,
     "numeric_value": numeric_value,
@@ -703,6 +848,12 @@ def _build_lab_record(
 
 
 def _infer_status(result_text: str) -> str:
+  if any(keyword in result_text for keyword in ["偏高", "升高", "略高", "高于参考范围", "高于正常", "超过参考范围"]):
+    return "high"
+  if any(keyword in result_text for keyword in ["偏低", "降低", "略低", "低于参考范围", "低于正常", "低于下限"]):
+    return "low"
+  if any(keyword in result_text for keyword in ["正常", "未见明显", "稳定", "平稳", "范围内", "未见异常", "未明显升高"]):
+    return "normal"
   if any(keyword in result_text for keyword in ["偏高", "升高", "略高"]):
     return "high"
   if any(keyword in result_text for keyword in ["偏低", "降低", "略低"]):

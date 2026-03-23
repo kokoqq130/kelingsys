@@ -137,6 +137,7 @@ class QueryService:
         lr.result_date,
         lr.result_date_text,
         lr.test_group,
+        lr.panel_name,
         lr.test_name,
         lr.result_text,
         lr.numeric_value,

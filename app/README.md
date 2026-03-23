@@ -71,6 +71,12 @@ pnpm run build:share
 .\scripts\Build-ShareSite.ps1
 ```
 
+分享构建阶段调用后端导出脚本时，也会明确使用 `app/backend/.venv` 里的 Python；如果虚拟环境不存在，请先运行：
+
+```powershell
+.\scripts\Setup-Backend.ps1
+```
+
 构建完成后，分享站点产物位于 `app/frontend/dist/`。
 
 ### GitHub Actions + EdgeOne Pages

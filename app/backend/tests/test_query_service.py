@@ -53,6 +53,18 @@ class QueryServiceTests(unittest.TestCase):
       self.assertNotIn("目前饮食", test_names)
       self.assertNotIn("近年随访提示", test_names)
 
+  def test_lab_groups_split_panel_items_into_individual_metrics(self) -> None:
+    with get_connection() as connection:
+      service = QueryService(connection)
+      labs = service.get_lab_groups()
+      panel_metric_pairs = {(item["panel_name"], item["test_name"]) for item in labs}
+
+      self.assertIn(("血清肝功能 11 项", "总蛋白"), panel_metric_pairs)
+      self.assertIn(("血清肝功能 11 项", "白蛋白"), panel_metric_pairs)
+      self.assertIn(("血清电解质 6 项", "钠"), panel_metric_pairs)
+      self.assertIn(("血氨基酸酰基肉碱谱", "C3/C2"), panel_metric_pairs)
+      self.assertNotIn(("血清肝功能 11 项", "血清肝功能 11 项"), panel_metric_pairs)
+
   def test_search_finds_diazepam_keyword(self) -> None:
     with get_connection() as connection:
       service = QueryService(connection)

@@ -21,7 +21,9 @@ function resolvePythonCommand() {
     return posixVenv;
   }
 
-  return process.platform === 'win32' ? 'python' : 'python3';
+  throw new Error(
+    'Backend virtual environment was not found. Run scripts/Setup-Backend.ps1 first and use app/backend/.venv Python.',
+  );
 }
 
 function resolvePnpmCommand() {

@@ -7,16 +7,38 @@ $pythonPath = Join-Path $venvRoot 'Scripts\python.exe'
 $requirementsPath = Join-Path $backendRoot 'requirements.txt'
 
 if (-not (Test-Path $requirementsPath)) {
-  throw "未找到后端依赖文件：$requirementsPath"
+  throw "Backend requirements file not found: $requirementsPath"
 }
 
-if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
-  throw '未找到系统 Python，请先安装 Python 3.11+ 并确保 python 命令可用。'
+function Get-BootstrapPython {
+  $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+  if ($pythonCmd) {
+    return @($pythonCmd.Source)
+  }
+
+  $pyCmd = Get-Command py -ErrorAction SilentlyContinue
+  if ($pyCmd) {
+    foreach ($args in @(@('-3.11'), @('-3'), @())) {
+      try {
+        & $pyCmd.Source @args -c "import sys; raise SystemExit(0 if sys.version_info >= (3, 11) else 1)" | Out-Null
+        return @($pyCmd.Source) + $args
+      }
+      catch {
+      }
+    }
+  }
+
+  return $null
 }
 
 if (-not (Test-Path $pythonPath)) {
-  Write-Host "正在创建后端虚拟环境：$venvRoot"
-  python -m venv $venvRoot
+  $bootstrapPython = Get-BootstrapPython
+  if (-not $bootstrapPython) {
+    throw 'Python 3.11+ was not found. Install Python or make `python` / `py` available on PATH.'
+  }
+
+  Write-Host "Creating backend virtual environment: $venvRoot"
+  & $bootstrapPython[0] @($bootstrapPython | Select-Object -Skip 1) -m venv $venvRoot
 }
 
 $needsInstall = $false
@@ -29,8 +51,8 @@ catch {
 }
 
 if ($needsInstall) {
-  Write-Host '正在安装后端依赖...'
+  Write-Host 'Installing backend dependencies...'
   & $pythonPath -m pip install -r $requirementsPath
 }
 
-Write-Host "后端虚拟环境已就绪：$pythonPath"
+Write-Host "Backend virtual environment ready: $pythonPath"
