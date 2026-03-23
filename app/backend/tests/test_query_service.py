@@ -44,6 +44,15 @@ class QueryServiceTests(unittest.TestCase):
       self.assertIsNotNone(betaine)
       self.assertEqual(betaine["category"], "代谢病治疗")
 
+  def test_lab_groups_exclude_narrative_history_items(self) -> None:
+    with get_connection() as connection:
+      service = QueryService(connection)
+      labs = service.get_lab_groups()
+      test_names = {item["test_name"] for item in labs}
+      self.assertIn("同型半胱氨酸", test_names)
+      self.assertNotIn("目前饮食", test_names)
+      self.assertNotIn("近年随访提示", test_names)
+
   def test_search_finds_diazepam_keyword(self) -> None:
     with get_connection() as connection:
       service = QueryService(connection)

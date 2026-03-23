@@ -429,6 +429,7 @@ def _parse_main_summary(document: DocumentRecord) -> dict[str, list[dict] | dict
       continue
 
     plain = _plain_text(stripped)
+    indent = len(raw_line) - len(raw_line.lstrip(" "))
 
     if plain.startswith("一、"):
       section = "core"
@@ -526,15 +527,18 @@ def _parse_main_summary(document: DocumentRecord) -> dict[str, list[dict] | dict
 
     elif section == "history":
       if plain.startswith("- 既往代谢指标（"):
-        date_text, current_history_date = _extract_date(plain)
-      elif plain.startswith("- ") and current_history_date:
+        _, current_history_date = _extract_date(plain)
+      elif plain.startswith("- ") and indent == 0:
+        current_history_date = ""
+        overview["highlights"].append(plain[2:].strip())
+      elif plain.startswith("- ") and indent > 0 and current_history_date:
         result_line = plain[2:].strip()
         lab_record = _build_lab_record(
           test_group="长期参考",
           test_name=result_line.split("：", 1)[0].strip(),
           result_text=result_line,
           result_date=current_history_date,
-          result_date_text=date_text if (date_text := _format_display_date(current_history_date)) else "",
+          result_date_text=_format_display_date(current_history_date),
           is_approximate=False,
         )
         if lab_record:

@@ -49,6 +49,17 @@ function Get-DefaultMainMarkdown {
         [string]$Root
     )
 
+    $preferredMainDoc = Join-Path $Root '柯灵用\柯灵基本信息.md'
+    if (Test-Path $preferredMainDoc) {
+        return (Resolve-Path $preferredMainDoc).Path
+    }
+
+    $namedMatch = Get-ChildItem -Path $Root -Recurse -File -Filter '柯灵基本信息.md' |
+        Select-Object -First 1
+    if ($namedMatch) {
+        return $namedMatch.FullName
+    }
+
     $candidateDirs = Get-ChildItem -Path $Root -Directory |
         Where-Object { $_.Name -ne '.codex' -and $_.Name -ne '.git' }
 
