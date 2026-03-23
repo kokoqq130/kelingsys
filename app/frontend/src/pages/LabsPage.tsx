@@ -19,6 +19,19 @@ function statusColor(status: LabItem['status']): string {
   return 'default';
 }
 
+function statusLabel(status: LabItem['status']): string {
+  if (status === 'high') {
+    return '偏高';
+  }
+  if (status === 'low') {
+    return '偏低';
+  }
+  if (status === 'normal') {
+    return '平稳';
+  }
+  return '待判断';
+}
+
 const LabsPage = () => {
   const { token } = theme.useToken();
   const { data, error, loading } = useApiResource(medicalApi.getLabs, []);
@@ -63,7 +76,7 @@ const LabsPage = () => {
       <div>
         <Typography.Title level={3}>检查结果</Typography.Title>
         <Typography.Paragraph>
-          当前先按结构化列表展示，下一轮再补趋势图和重点指标可视化。
+          这里汇总近期整理出的检查结果，既能看列表，也能查看部分指标的变化趋势。
         </Typography.Paragraph>
       </div>
       <Card variant="borderless">
@@ -127,7 +140,7 @@ const LabsPage = () => {
                 title: '状态',
                 dataIndex: 'status',
                 width: 100,
-                render: value => <Tag color={statusColor(value)}>{value}</Tag>,
+                render: value => <Tag color={statusColor(value)}>{statusLabel(value)}</Tag>,
               },
               {
                 title: '原始文件',

@@ -7,7 +7,7 @@ const StatusBanner = () => {
   const { data: health, error, loading, reload } = useApiResource(medicalApi.getHealth, []);
 
   if (loading) {
-    return <Alert type="info" message="正在检查后端服务状态..." showIcon />;
+    return <Alert type="info" message="正在连接资料服务..." showIcon />;
   }
 
   if (error) {
@@ -15,12 +15,12 @@ const StatusBanner = () => {
       <Alert
         type="warning"
         showIcon
-        message="后端服务尚未连通"
+        message="暂时无法读取资料"
         description={
           <Space direction="vertical" size={8}>
             <span>{error}</span>
             <Button size="small" onClick={() => void reload()}>
-              重新检查
+              重新连接
             </Button>
           </Space>
         }
@@ -32,8 +32,8 @@ const StatusBanner = () => {
     <Alert
       type="success"
       showIcon
-      message="后端基础服务已连通"
-      description={`${health?.service} · 索引时间：${health?.indexed_at || '未记录'}`}
+      message="资料读取正常"
+      description={`最近整理时间：${health?.indexed_at || '未记录'}`}
     />
   );
 };

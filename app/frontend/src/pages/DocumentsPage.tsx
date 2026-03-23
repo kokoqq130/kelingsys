@@ -23,7 +23,7 @@ const DocumentLayout = styled.div`
 const kindLabelMap: Record<string, string> = {
   main_summary: '主文档',
   admission_note: '住院整理',
-  report_index: '报告索引',
+  report_index: '报告目录',
   other: '其他文档',
 };
 
@@ -96,7 +96,7 @@ const DocumentsPage = () => {
       <div>
         <Typography.Title level={3}>文档资料</Typography.Title>
         <Typography.Paragraph>
-          当前已接入主文档和住院整理文档预览，并支持跳转到原始图片和 PDF。
+          这里可以直接阅读整理好的文档内容，并继续追到对应的图片或 PDF。
         </Typography.Paragraph>
       </div>
       <DocumentLayout>

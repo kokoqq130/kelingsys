@@ -68,7 +68,7 @@ const TimelinePage = () => {
         <div>
           <Typography.Title level={3}>时间线</Typography.Title>
           <Typography.Paragraph>
-            已按发作和住院事件接入真实数据，后续会继续补调药和更多检查节点。
+            这里按时间顺序梳理发作、住院、调药和检查，方便快速回顾每次变化。
           </Typography.Paragraph>
         </div>
         <Segmented
@@ -96,7 +96,7 @@ const TimelinePage = () => {
                 <Typography.Text>{item.summary}</Typography.Text>
                 <Typography.Text type="secondary">{item.detail_text}</Typography.Text>
                 <Space wrap>
-                  <Link to={`/documents?documentId=${item.source_document_id}`}>文档页查看</Link>
+                  <Link to={`/documents?documentId=${item.source_document_id}`}>查看对应文档</Link>
                   {item.raw_url ? (
                     <Button type="link" href={item.raw_url} target="_blank">
                       打开原始文件

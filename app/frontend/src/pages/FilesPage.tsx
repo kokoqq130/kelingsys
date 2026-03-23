@@ -12,6 +12,13 @@ const typeColorMap: Record<string, string> = {
   other: 'default',
 };
 
+const typeLabelMap: Record<string, string> = {
+  markdown: '整理文档',
+  image: '图片',
+  pdf: 'PDF',
+  other: '其他',
+};
+
 const FilesPage = () => {
   const [fileType, setFileType] = useState<string>('all');
   const [keyword, setKeyword] = useState('');
@@ -36,7 +43,7 @@ const FilesPage = () => {
       <div>
         <Typography.Title level={3}>原始文件</Typography.Title>
         <Typography.Paragraph>
-          这里直接浏览工作区里的原始 Markdown、图片和 PDF，适合回溯“某个结论到底来自哪份原始资料”。
+          这里可以直接查看原始图片、PDF 和整理文档，方便回到最初资料核对细节。
         </Typography.Paragraph>
       </div>
       <Card variant="borderless">
@@ -55,7 +62,7 @@ const FilesPage = () => {
                 onChange={value => setFileType(String(value))}
                 options={[
                   { label: '全部', value: 'all' },
-                  { label: 'Markdown', value: 'markdown' },
+                  { label: '整理文档', value: 'markdown' },
                   { label: '图片', value: 'image' },
                   { label: 'PDF', value: 'pdf' },
                 ]}
@@ -76,7 +83,7 @@ const FilesPage = () => {
                   title: '类型',
                   dataIndex: 'file_type',
                   width: 110,
-                  render: value => <Tag color={typeColorMap[value] || 'default'}>{value}</Tag>,
+                  render: value => <Tag color={typeColorMap[value] || 'default'}>{typeLabelMap[value] || value}</Tag>,
                 },
                 {
                   title: '路径',

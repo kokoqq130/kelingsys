@@ -6,7 +6,7 @@ export async function apiGet<T>(url: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
+    throw new Error(`读取失败，请稍后重试（${response.status}）`);
   }
 
   return response.json() as Promise<T>;
@@ -21,7 +21,7 @@ export async function apiPost<T>(url: string): Promise<T> {
   });
 
   if (!response.ok) {
-    throw new Error(`Request failed: ${response.status}`);
+    throw new Error(`提交失败，请稍后重试（${response.status}）`);
   }
 
   return response.json() as Promise<T>;

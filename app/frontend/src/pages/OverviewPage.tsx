@@ -18,7 +18,17 @@ function resolveDocumentKindLabel(value?: string): string {
   const map: Record<string, string> = {
     main_summary: '主文档',
     admission_note: '住院整理',
-    report_index: '报告索引',
+    report_index: '报告目录',
+    other: '其他',
+  };
+  return map[value || ''] || value || '其他';
+}
+
+function resolveFileTypeLabel(value?: string): string {
+  const map: Record<string, string> = {
+    markdown: '整理文档',
+    image: '图片',
+    pdf: 'PDF',
     other: '其他',
   };
   return map[value || ''] || value || '其他';
@@ -31,7 +41,7 @@ const OverviewPage = () => {
 
   const handleReindex = async () => {
     await medicalApi.reindex();
-    message.success('索引已重建');
+    message.success('资料已刷新');
     await reload();
   };
 
@@ -53,17 +63,17 @@ const OverviewPage = () => {
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={15}>
           <Card
-            bordered={false}
+            variant="borderless"
             extra={
               <Button type="primary" onClick={() => void handleReindex()}>
-                重建索引
+                刷新资料
               </Button>
             }
           >
             <Space direction="vertical" size={18} style={{ width: '100%' }}>
               <div>
                 <Typography.Text style={{ color: token.colorPrimaryActive, letterSpacing: 2 }}>
-                  PATIENT OVERVIEW
+                  当前情况总览
                 </Typography.Text>
                 <Typography.Title level={2} style={{ marginTop: 8, marginBottom: 10 }}>
                   {data.patient['姓名']} 的资料总览
@@ -171,7 +181,7 @@ const OverviewPage = () => {
       </Row>
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={8}>
-          <Card variant="borderless" title="事件结构">
+          <Card variant="borderless" title="事件分布">
             <Space direction="vertical" size={14} style={{ width: '100%' }}>
               {data.event_type_stats.map(item => (
                 <div key={item.event_type}>
@@ -190,12 +200,12 @@ const OverviewPage = () => {
           </Card>
         </Col>
         <Col xs={24} xl={8}>
-          <Card variant="borderless" title="资料结构">
+          <Card variant="borderless" title="资料分布">
             <Space direction="vertical" size={14} style={{ width: '100%' }}>
               {data.file_type_stats.map(item => (
                 <div key={item.file_type}>
                   <Space style={{ width: '100%', justifyContent: 'space-between' }}>
-                    <Typography.Text>{item.file_type}</Typography.Text>
+                    <Typography.Text>{resolveFileTypeLabel(item.file_type)}</Typography.Text>
                     <Typography.Text type="secondary">{item.count}</Typography.Text>
                   </Space>
                   <Progress

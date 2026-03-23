@@ -39,7 +39,7 @@ const MedicationsPage = () => {
       <div>
         <Typography.Title level={3}>用药变化</Typography.Title>
         <Typography.Paragraph>
-          这一页同时展示当前用药和从主文档时间轴中抽出的调药记录，方便快速回答“什么时候加了什么药、减了什么药”。
+          这一页把当前用药和历次调药放在一起，便于快速回顾“什么时候开始、增加、减少或停用了哪种药”。
         </Typography.Paragraph>
       </div>
       <Row gutter={[20, 20]}>
@@ -89,7 +89,7 @@ const MedicationsPage = () => {
                     ) : null,
                     item.document_id ? (
                       <Link key="doc" to={`/documents?documentId=${item.document_id}`}>
-                        文档页
+                        查看文档
                       </Link>
                     ) : null,
                   ]}
@@ -120,7 +120,7 @@ const MedicationsPage = () => {
                     <Typography.Text>{item.summary}</Typography.Text>
                     <Typography.Text type="secondary">{item.detail_text}</Typography.Text>
                     <Space wrap>
-                      <Link to={`/documents?documentId=${item.document_id}`}>文档页查看</Link>
+                      <Link to={`/documents?documentId=${item.document_id}`}>查看对应文档</Link>
                       {item.raw_url ? (
                         <Button type="link" href={item.raw_url} target="_blank">
                           打开原文

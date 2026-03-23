@@ -29,7 +29,7 @@ const SearchPage = () => {
       <div>
         <Typography.Title level={3}>搜索</Typography.Title>
         <Typography.Paragraph>
-          当前已接入全文搜索，中文关键词会先尝试 FTS，再自动回退到文本匹配。
+          可以直接按症状、药名、检查项目或住院记录查找，适合快速定位相关资料。
         </Typography.Paragraph>
       </div>
       <Card variant="borderless">
@@ -51,11 +51,11 @@ const SearchPage = () => {
                 <List.Item
                   actions={[
                     <Link key="doc" to={`/documents?documentId=${item.document_id}`}>
-                      文档页查看
+                      查看文档
                     </Link>,
                     item.raw_url ? (
                       <Button key="open" type="link" href={item.raw_url} target="_blank">
-                        打开原文
+                        打开原始资料
                       </Button>
                     ) : null,
                   ]}

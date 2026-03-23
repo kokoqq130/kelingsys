@@ -123,23 +123,23 @@ const AppLayout = () => {
     <SidebarPanel>
       <BrandBlock>
         <Typography.Text style={{ color: 'rgba(240,253,244,0.72)', fontSize: 12, letterSpacing: 2.4 }}>
-          QUERY-FIRST WORKSPACE
+          资料总览与回溯
         </Typography.Text>
         <Typography.Title level={3} style={{ color: '#ffffff', margin: '10px 0 8px' }}>
           柯灵资料查询系统
         </Typography.Title>
         <Typography.Paragraph style={{ color: 'rgba(240,253,244,0.82)', marginBottom: 16 }}>
-          围绕真实文档、时间线和原始文件做查询，不把资料工作强行改造成表单后台。
+          以医生沟通、病程回顾和原始资料核对为主，尽量让信息查找更直接。
         </Typography.Paragraph>
         <Space wrap size={[8, 8]}>
           <Tag bordered={false} color="success">
-            查询优先
+            总览清楚
           </Tag>
           <Tag bordered={false} color="processing">
-            Ant Design
+            回顾方便
           </Tag>
           <Tag bordered={false} color="warning">
-            原始文件直达
+            原始资料可追溯
           </Tag>
         </Space>
       </BrandBlock>
@@ -152,15 +152,15 @@ const AppLayout = () => {
       />
       <SidebarFooter>
         <Typography.Text strong style={{ display: 'block', marginBottom: 8 }}>
-          建议入口
+          常用入口
         </Typography.Text>
         <Typography.Paragraph style={{ marginBottom: 8, color: 'rgba(6, 95, 70, 0.7)' }}>
-          先看总览和时间线，再跳到文档资料或原始文件确认来源。
+          可以先看总览和时间线，再打开文档资料或原始文件确认细节。
         </Typography.Paragraph>
         <Space wrap size={[8, 8]}>
-          <Tag bordered={false}>/documents</Tag>
-          <Tag bordered={false}>/files</Tag>
-          <Tag bordered={false}>/search</Tag>
+          <Tag bordered={false}>文档资料</Tag>
+          <Tag bordered={false}>原始文件</Tag>
+          <Tag bordered={false}>搜索</Tag>
         </Space>
       </SidebarFooter>
     </SidebarPanel>
@@ -197,25 +197,25 @@ const AppLayout = () => {
                 ) : null}
                 <div>
                   <Typography.Text style={{ color: 'rgba(21, 128, 61, 0.9)', letterSpacing: 1.6 }}>
-                    MEDICAL QUERY DESK
+                    病情整理台
                   </Typography.Text>
                   <Typography.Title level={2} style={{ margin: '8px 0 8px' }}>
-                    查询优先的资料工作台
+                    资料总览与病程回顾
                   </Typography.Title>
                   <Typography.Paragraph style={{ marginBottom: 0, maxWidth: 760 }}>
-                    已接入真实资料索引、调药时间轴、Markdown 预览和原始文件浏览，适合快速准备医生沟通和病程回溯。
+                    可以集中查看主要情况、发作与住院经过、用药变化，以及每条结论对应的原始资料。
                   </Typography.Paragraph>
                 </div>
               </Space>
               <Space wrap size={[8, 8]} style={{ justifyContent: 'flex-end' }}>
                 <Tag bordered={false} color="success">
-                  当前资料索引
+                  近期情况
                 </Tag>
                 <Tag bordered={false} color="processing">
-                  调药时间线
+                  用药变化
                 </Tag>
                 <Tag bordered={false} color="warning">
-                  原始文件代理
+                  原始资料
                 </Tag>
               </Space>
             </Space>
