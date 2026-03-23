@@ -15,6 +15,9 @@ on:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    env:
+      EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
+      EDGEONE_PROJECT_NAME: ${{ vars.EDGEONE_PROJECT_NAME }}
 
     steps:
       - name: Checkout repository
@@ -57,13 +60,14 @@ jobs:
           name: edgeone-share-dist
           path: app/frontend/dist
 
+      - name: Validate EdgeOne configuration
+        run: |
+          test -n "$EDGEONE_API_TOKEN"
+          test -n "$EDGEONE_PROJECT_NAME"
+
       - name: Deploy to EdgeOne Pages
-        if: ${{ secrets.EDGEONE_API_TOKEN != '' && vars.EDGEONE_PROJECT_NAME != '' }}
         id: deploy
         working-directory: app/frontend
-        env:
-          EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
-          EDGEONE_PROJECT_NAME: ${{ vars.EDGEONE_PROJECT_NAME }}
         run: |
           set +e
           DEPLOY_OUTPUT=$(npx --yes edgeone pages deploy ./dist -n "$EDGEONE_PROJECT_NAME" -e "${{ inputs.deploy_env }}" -t "$EDGEONE_API_TOKEN" 2>&1)
@@ -87,6 +91,6 @@ jobs:
           echo "## EdgeOne Pages 部署完成" >> "$GITHUB_STEP_SUMMARY"
           echo "" >> "$GITHUB_STEP_SUMMARY"
           echo "- 部署环境：${{ inputs.deploy_env }}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- 项目名称：${{ vars.EDGEONE_PROJECT_NAME }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 项目名称：$EDGEONE_PROJECT_NAME" >> "$GITHUB_STEP_SUMMARY"
           echo "- 项目 ID：${{ steps.deploy.outputs.project_id }}" >> "$GITHUB_STEP_SUMMARY"
           echo "- 预览链接：${{ steps.deploy.outputs.deploy_url }}" >> "$GITHUB_STEP_SUMMARY"
