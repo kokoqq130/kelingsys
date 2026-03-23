@@ -1,5 +1,6 @@
-import { Button, Card, Empty, Input, Segmented, Space, Table, Tag, Typography } from 'antd';
+import { Button, Card, Empty, Grid, Input, Segmented, Space, Table, Tag, Typography } from 'antd';
 import { useDeferredValue, useMemo, useState } from 'react';
+import styled from 'styled-components';
 
 import { medicalApi } from '@/api/medical';
 import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
@@ -21,7 +22,33 @@ const typeLabelMap: Record<string, string> = {
   other: '其他',
 };
 
+const PageStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    gap: 16px;
+  }
+`;
+
+const Toolbar = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+  }
+`;
+
+const { useBreakpoint } = Grid;
+
 const FilesPage = () => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const [fileType, setFileType] = useState<string>('all');
   const [keyword, setKeyword] = useState('');
   const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
@@ -55,9 +82,9 @@ const FilesPage = () => {
   };
 
   return (
-    <Space direction="vertical" size={20} style={{ width: '100%' }}>
+    <PageStack>
       <div>
-        <Typography.Title level={3}>原始文件</Typography.Title>
+        <Typography.Title level={isMobile ? 4 : 3}>原始文件</Typography.Title>
         <Typography.Paragraph>
           这里可以直接查看原始图片、PDF 和整理文档，方便回到最初资料核对细节。
         </Typography.Paragraph>
@@ -66,12 +93,12 @@ const FilesPage = () => {
         {error ? <Empty description={error} /> : null}
         {!error ? (
           <Space direction="vertical" size={16} style={{ width: '100%' }}>
-            <Space wrap>
+            <Toolbar>
               <Input
                 value={keyword}
                 onChange={event => setKeyword(event.target.value)}
                 placeholder="按文件名或路径筛选"
-                style={{ width: 280 }}
+                style={{ width: isMobile ? '100%' : 280 }}
               />
               <Segmented
                 value={fileType}
@@ -82,8 +109,9 @@ const FilesPage = () => {
                   { label: '图片', value: 'image' },
                   { label: 'PDF', value: 'pdf' },
                 ]}
+                style={{ width: isMobile ? '100%' : undefined }}
               />
-            </Space>
+            </Toolbar>
             <Table<FileItem>
               loading={loading}
               rowKey="id"
@@ -93,7 +121,7 @@ const FilesPage = () => {
                 {
                   title: '文件名',
                   dataIndex: 'file_name',
-                  width: 220,
+                  width: isMobile ? 180 : 220,
                 },
                 {
                   title: '类型',
@@ -109,10 +137,11 @@ const FilesPage = () => {
                   title: '更新时间',
                   dataIndex: 'updated_at',
                   width: 180,
+                  responsive: ['md'],
                 },
                 {
                   title: '操作',
-                  width: 100,
+                  width: isMobile ? 88 : 100,
                   render: (_, record) =>
                     record.raw_url ? (
                       <Space size={4}>
@@ -134,7 +163,7 @@ const FilesPage = () => {
         target={previewTarget}
         onClose={() => setPreviewTarget(null)}
       />
-    </Space>
+    </PageStack>
   );
 };
 

@@ -9,7 +9,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import { Column, Pie } from '@ant-design/plots';
-import { Alert, App, Button, Card, Empty, Space, Statistic, Tag, Typography, theme } from 'antd';
+import { Alert, App, Button, Card, Empty, Grid, Space, Statistic, Tag, Typography, theme } from 'antd';
 import { useMemo, useState } from 'react';
 import styled from 'styled-components';
 
@@ -23,6 +23,10 @@ const PageStack = styled.div`
   flex-direction: column;
   gap: 16px;
   width: 100%;
+
+  @media (max-width: 768px) {
+    gap: 12px;
+  }
 `;
 
 const HeroGrid = styled.div`
@@ -34,6 +38,10 @@ const HeroGrid = styled.div`
   @media (max-width: 1200px) {
     grid-template-columns: 1fr;
   }
+
+  @media (max-width: 768px) {
+    gap: 12px;
+  }
 `;
 
 const TwoColumnGrid = styled.div`
@@ -43,6 +51,10 @@ const TwoColumnGrid = styled.div`
 
   @media (max-width: 1200px) {
     grid-template-columns: 1fr;
+  }
+
+  @media (max-width: 768px) {
+    gap: 12px;
   }
 `;
 
@@ -58,6 +70,10 @@ const ThreeColumnGrid = styled.div`
   @media (max-width: 900px) {
     grid-template-columns: 1fr;
   }
+
+  @media (max-width: 768px) {
+    gap: 12px;
+  }
 `;
 
 const FullCard = styled(Card)`
@@ -68,6 +84,12 @@ const FullCard = styled(Card)`
     height: 100%;
     flex-direction: column;
     gap: 16px;
+  }
+
+  @media (max-width: 768px) {
+    .ant-card-body {
+      gap: 14px;
+    }
   }
 `;
 
@@ -80,6 +102,12 @@ const HeroPrimaryCard = styled(Card)`
     gap: 16px;
     grid-template-rows: auto auto auto minmax(0, 1fr);
   }
+
+  @media (max-width: 768px) {
+    .ant-card-body {
+      gap: 14px;
+    }
+  }
 `;
 
 const CompactCard = styled(Card)`
@@ -90,6 +118,12 @@ const CompactCard = styled(Card)`
     height: 100%;
     gap: 16px;
   }
+
+  @media (max-width: 768px) {
+    .ant-card-body {
+      gap: 14px;
+    }
+  }
 `;
 
 const CardHeader = styled.div`
@@ -98,18 +132,32 @@ const CardHeader = styled.div`
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 12px;
+  }
 `;
 
 const HeaderMeta = styled.div`
   display: flex;
   flex-direction: column;
   gap: 6px;
+
+  @media (max-width: 768px) {
+    gap: 4px;
+  }
 `;
 
 const Kicker = styled(Typography.Text)`
   color: rgba(21, 128, 61, 0.9);
   font-size: 12px;
   letter-spacing: 1.6px;
+
+  @media (max-width: 768px) {
+    font-size: 11px;
+    letter-spacing: 1.2px;
+  }
 `;
 
 const HeroTitle = styled(Typography.Title)`
@@ -121,12 +169,21 @@ const SoftPanel = styled.div`
   border: 1px solid rgba(134, 239, 172, 0.72);
   border-radius: 20px;
   background: linear-gradient(180deg, rgba(240, 253, 244, 0.92), rgba(220, 252, 231, 0.74));
+
+  @media (max-width: 768px) {
+    padding: 14px 16px;
+    border-radius: 18px;
+  }
 `;
 
 const FactGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: 10px;
+
+  @media (max-width: 768px) {
+    grid-template-columns: repeat(auto-fit, minmax(112px, 1fr));
+  }
 `;
 
 const FactItem = styled.div`
@@ -134,6 +191,11 @@ const FactItem = styled.div`
   border: 1px solid rgba(187, 247, 208, 0.82);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.72);
+
+  @media (max-width: 768px) {
+    padding: 10px 12px;
+    border-radius: 14px;
+  }
 `;
 
 const SplitGrid = styled.div`
@@ -176,6 +238,12 @@ const MetricTile = styled.div`
   border: 1px solid rgba(187, 247, 208, 0.72);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.74);
+
+  @media (max-width: 768px) {
+    min-height: 108px;
+    padding: 14px;
+    border-radius: 18px;
+  }
 `;
 
 const MetricIcon = styled.div`
@@ -188,6 +256,13 @@ const MetricIcon = styled.div`
   background: rgba(220, 252, 231, 0.9);
   color: #15803d;
   font-size: 18px;
+
+  @media (max-width: 768px) {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    font-size: 16px;
+  }
 `;
 
 const SnapshotStack = styled.div`
@@ -204,6 +279,11 @@ const SnapshotCard = styled.div`
   border: 1px solid rgba(187, 247, 208, 0.76);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.76);
+
+  @media (max-width: 768px) {
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
 `;
 
 const ClampText = styled.div<{ $rows?: number }>`
@@ -225,6 +305,11 @@ const MedicationGrid = styled.div`
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 14px;
+
+  @media (max-width: 560px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 `;
 
 const MedicationTile = styled.div`
@@ -236,6 +321,12 @@ const MedicationTile = styled.div`
   border: 1px solid rgba(187, 247, 208, 0.74);
   border-radius: 20px;
   background: rgba(255, 255, 255, 0.7);
+
+  @media (max-width: 768px) {
+    min-height: auto;
+    padding: 14px 16px;
+    border-radius: 18px;
+  }
 `;
 
 const HighlightList = styled.div`
@@ -248,6 +339,11 @@ const HighlightItem = styled.div`
   border: 1px solid rgba(187, 247, 208, 0.7);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.72);
+
+  @media (max-width: 768px) {
+    padding: 12px 14px;
+    border-radius: 16px;
+  }
 `;
 
 const ChartSplit = styled.div`
@@ -293,7 +389,13 @@ const ScrollArea = styled.div`
   max-height: 460px;
   overflow: auto;
   padding-right: 4px;
+
+  @media (max-width: 768px) {
+    max-height: 360px;
+  }
 `;
+
+const { useBreakpoint } = Grid;
 
 function resolveEventTypeLabel(value?: string): string {
   const map: Record<string, string> = {
@@ -332,6 +434,8 @@ function resolveLabAlertType(status?: string): 'warning' | 'info' {
 const OverviewPage = () => {
   const { message } = App.useApp();
   const { token } = theme.useToken();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const { data, error, loading, reload } = useApiResource(medicalApi.getOverview, []);
   const { data: documents } = useApiResource(medicalApi.getDocuments, []);
   const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
@@ -483,6 +587,7 @@ const OverviewPage = () => {
           <Button
             type="primary"
             ghost
+            block={isMobile}
             icon={<ReadOutlined />}
             onClick={() => void openMainDocumentPreview()}
             disabled={!mainDocument}
@@ -497,10 +602,15 @@ const OverviewPage = () => {
           <CardHeader>
             <HeaderMeta>
               <Kicker>资料总览</Kicker>
-              <HeroTitle level={2}>{patientName} 的当前情况</HeroTitle>
+              <HeroTitle level={isMobile ? 3 : 2}>{patientName} 的当前情况</HeroTitle>
             </HeaderMeta>
             {medicalApiCapabilities.supportsReindex ? (
-              <Button type="primary" icon={<ReloadOutlined />} onClick={() => void handleReindex()}>
+              <Button
+                type="primary"
+                block={isMobile}
+                icon={<ReloadOutlined />}
+                onClick={() => void handleReindex()}
+              >
                 刷新资料
               </Button>
             ) : null}
@@ -508,7 +618,13 @@ const OverviewPage = () => {
 
           <SoftPanel>
             <Typography.Text strong>当前状态</Typography.Text>
-            <Typography.Paragraph style={{ margin: '10px 0 0', fontSize: 16, lineHeight: 1.8 }}>
+            <Typography.Paragraph
+              style={{
+                margin: '10px 0 0',
+                fontSize: isMobile ? 15 : 16,
+                lineHeight: isMobile ? 1.72 : 1.8,
+              }}
+            >
               {data.current_status}
             </Typography.Paragraph>
           </SoftPanel>
@@ -606,11 +722,11 @@ const OverviewPage = () => {
 
       <TwoColumnGrid>
         <FullCard variant="borderless">
-          <CardHeader>
-            <HeaderMeta>
-              <Kicker>目前治疗</Kicker>
-              <Typography.Title level={4} style={{ margin: 0 }}>
-                当前用药与补充方案
+            <CardHeader>
+              <HeaderMeta>
+                <Kicker>目前治疗</Kicker>
+                <Typography.Title level={4} style={{ margin: 0 }}>
+                  当前用药与补充方案
               </Typography.Title>
             </HeaderMeta>
             <MedicationStats>
@@ -698,7 +814,7 @@ const OverviewPage = () => {
                 radius={0.9}
                 legend={false}
                 label={false}
-                height={240}
+                height={isMobile ? 220 : 240}
                 color={eventChartColors}
               />
               <LegendList>
@@ -734,7 +850,7 @@ const OverviewPage = () => {
                 yField="value"
                 legend={false}
                 label={false}
-                height={240}
+                height={isMobile ? 220 : 240}
                 color={token.colorPrimary}
                 axis={{
                   x: { labelAutoRotate: false },

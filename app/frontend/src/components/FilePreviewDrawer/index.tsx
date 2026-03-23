@@ -6,7 +6,7 @@ import {
   LinkOutlined,
 } from '@ant-design/icons';
 import { XMarkdown } from '@ant-design/x-markdown';
-import { Alert, Button, Drawer, Empty, Image, Skeleton, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Drawer, Empty, Grid, Image, Skeleton, Space, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import styled from 'styled-components';
 
@@ -25,27 +25,32 @@ export interface FilePreviewTarget {
 
 const DrawerBody = styled.div`
   display: flex;
-  min-height: calc(100vh - 170px);
   flex-direction: column;
   gap: 16px;
 `;
 
-const PreviewFrame = styled.iframe`
+const PreviewFrame = styled.iframe<{ $compact: boolean }>`
   width: 100%;
-  min-height: calc(100vh - 240px);
+  min-height: ${props => (props.$compact ? '62vh' : 'calc(100vh - 240px)')};
   border: none;
-  border-radius: 18px;
+  border-radius: ${props => (props.$compact ? '16px' : '18px')};
   background: rgba(255, 255, 255, 0.8);
 `;
 
-const ImageWrap = styled.div`
+const ImageWrap = styled.div<{ $compact: boolean }>`
   display: flex;
   justify-content: center;
-  padding: 4px 0 18px;
+  padding: ${props => (props.$compact ? '0 0 8px' : '4px 0 18px')};
 `;
 
-const MarkdownWrap = styled.div`
+const MarkdownWrap = styled.div<{ $compact: boolean }>`
   min-width: 0;
+  padding-bottom: ${props => (props.$compact ? '8px' : '16px')};
+`;
+
+const PathText = styled(Typography.Text)`
+  display: block;
+  word-break: break-all;
 `;
 
 function escapeRegExp(value: string): string {
@@ -181,7 +186,11 @@ interface FilePreviewDrawerProps {
   onClose: () => void;
 }
 
+const { useBreakpoint } = Grid;
+
 const FilePreviewDrawer = ({ open, target, onClose }: FilePreviewDrawerProps) => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const previewType = useMemo(
     () => inferPreviewFileType(target?.relativePath, target?.fileType),
     [target],
@@ -298,13 +307,20 @@ const FilePreviewDrawer = ({ open, target, onClose }: FilePreviewDrawerProps) =>
         </Space>
       }
       placement="right"
-      width={760}
+      width={isMobile ? '100%' : 760}
       open={open}
       onClose={onClose}
       destroyOnHidden
+      styles={{ body: { padding: isMobile ? 16 : 24 } }}
       extra={
         target?.rawUrl ? (
-          <Button type="link" href={target.rawUrl} target="_blank" icon={<LinkOutlined />}>
+          <Button
+            type="link"
+            size={isMobile ? 'small' : 'middle'}
+            href={target.rawUrl}
+            target="_blank"
+            icon={<LinkOutlined />}
+          >
             新标签打开
           </Button>
         ) : null
@@ -314,7 +330,7 @@ const FilePreviewDrawer = ({ open, target, onClose }: FilePreviewDrawerProps) =>
         <Empty description="请选择需要预览的资料" />
       ) : (
         <DrawerBody>
-          <Typography.Text type="secondary">{target.relativePath}</Typography.Text>
+          <PathText type="secondary">{target.relativePath}</PathText>
 
           {loading ? <Skeleton active paragraph={{ rows: 10 }} /> : null}
 
@@ -337,23 +353,23 @@ const FilePreviewDrawer = ({ open, target, onClose }: FilePreviewDrawerProps) =>
           ) : null}
 
           {!loading && !error && previewType === 'markdown' ? (
-            <MarkdownWrap ref={markdownRef}>
+            <MarkdownWrap $compact={isMobile} ref={markdownRef}>
               <XMarkdown content={rewriteMarkdownLinks(markdownContent, target.relativePath)} />
             </MarkdownWrap>
           ) : null}
 
           {!loading && !error && previewType === 'image' && target.rawUrl ? (
-            <ImageWrap>
+            <ImageWrap $compact={isMobile}>
               <Image
                 src={target.rawUrl}
                 alt={target.title}
-                style={{ maxWidth: '100%', borderRadius: 20 }}
+                style={{ maxWidth: '100%', borderRadius: isMobile ? 16 : 20 }}
               />
             </ImageWrap>
           ) : null}
 
           {!loading && !error && previewType === 'pdf' && target.rawUrl ? (
-            <PreviewFrame src={target.rawUrl} title={target.title} />
+            <PreviewFrame $compact={isMobile} src={target.rawUrl} title={target.title} />
           ) : null}
 
           {!loading && !error && previewType === 'other' ? (

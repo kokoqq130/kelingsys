@@ -1,5 +1,21 @@
-import { Button, Card, Col, Empty, Input, List, Row, Segmented, Space, Statistic, Tag, Timeline, Typography } from 'antd';
+import {
+  Button,
+  Card,
+  Col,
+  Empty,
+  Grid,
+  Input,
+  List,
+  Row,
+  Segmented,
+  Space,
+  Statistic,
+  Tag,
+  Timeline,
+  Typography,
+} from 'antd';
 import { useDeferredValue, useMemo, useState } from 'react';
+import styled from 'styled-components';
 
 import { medicalApi } from '@/api/medical';
 import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
@@ -12,7 +28,46 @@ import {
   resolvePreviewTitle,
 } from '@/utils/filePreview';
 
+const PageStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    gap: 16px;
+  }
+`;
+
+const FilterStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    gap: 14px;
+  }
+`;
+
+const TimelineWrap = styled.div`
+  .ant-timeline-item {
+    padding-bottom: 18px;
+  }
+`;
+
+const TimelineItemContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+`;
+
+const { useBreakpoint } = Grid;
+
 const MedicationsPage = () => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const { data, error, loading } = useApiResource(medicalApi.getMedications, []);
   const [category, setCategory] = useState<string>('all');
   const [keyword, setKeyword] = useState('');
@@ -97,14 +152,14 @@ const MedicationsPage = () => {
   }
 
   return (
-    <Space direction="vertical" size={20} style={{ width: '100%' }}>
+    <PageStack>
       <div>
-        <Typography.Title level={3}>用药变化</Typography.Title>
+        <Typography.Title level={isMobile ? 4 : 3}>用药变化</Typography.Title>
         <Typography.Paragraph>
           这一页把当前用药和历次调药放在一起，便于快速回顾“什么时候开始、增加、减少或停用了哪种药”。
         </Typography.Paragraph>
       </div>
-      <Row gutter={[20, 20]}>
+      <Row gutter={[16, 16]}>
         <Col xs={24} md={8}>
           <Card variant="borderless">
             <Statistic title="当前用药数量" value={data?.current.length ?? 0} loading={loading} />
@@ -121,10 +176,10 @@ const MedicationsPage = () => {
           </Card>
         </Col>
       </Row>
-      <Row gutter={[20, 20]}>
+      <Row gutter={[16, 16]}>
         <Col xs={24} xl={11}>
           <Card variant="borderless" title="当前用药" loading={loading}>
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
+            <FilterStack>
               <Input
                 value={keyword}
                 onChange={event => setKeyword(event.target.value)}
@@ -137,6 +192,7 @@ const MedicationsPage = () => {
                   { label: '全部', value: 'all' },
                   ...categories.map(item => ({ label: item, value: item })),
                 ]}
+                style={{ width: '100%' }}
               />
               <List
                 dataSource={currentMedications}
@@ -163,30 +219,30 @@ const MedicationsPage = () => {
                   </List.Item>
                 )}
               />
-            </Space>
+            </FilterStack>
           </Card>
         </Col>
         <Col xs={24} xl={13}>
           <Card variant="borderless" title="调药时间轴" loading={loading}>
-            <Timeline
-              items={(data?.adjustments ?? []).map(item => ({
-                color: 'gold',
-                children: (
-                  <Space direction="vertical" size={6}>
-                    <Typography.Text strong>{item.event_date_text || item.event_date}</Typography.Text>
-                    <Typography.Text>{item.summary}</Typography.Text>
-                    <Typography.Text type="secondary">{item.detail_text}</Typography.Text>
-                    <Space wrap>
+            <TimelineWrap>
+              <Timeline
+                items={(data?.adjustments ?? []).map(item => ({
+                  color: 'gold',
+                  children: (
+                    <TimelineItemContent>
+                      <Typography.Text strong>{item.event_date_text || item.event_date}</Typography.Text>
+                      <Typography.Text>{item.summary}</Typography.Text>
+                      <Typography.Text type="secondary">{item.detail_text}</Typography.Text>
                       {item.raw_url || item.document_id ? (
                         <Button type="link" onClick={() => void openAdjustmentPreview(item)}>
                           预览文档
                         </Button>
                       ) : null}
-                    </Space>
-                  </Space>
-                ),
-              }))}
-            />
+                    </TimelineItemContent>
+                  ),
+                }))}
+              />
+            </TimelineWrap>
           </Card>
         </Col>
       </Row>
@@ -195,7 +251,7 @@ const MedicationsPage = () => {
         target={previewTarget}
         onClose={() => setPreviewTarget(null)}
       />
-    </Space>
+    </PageStack>
   );
 };
 

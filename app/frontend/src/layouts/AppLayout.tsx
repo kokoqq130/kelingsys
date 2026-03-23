@@ -60,6 +60,24 @@ const BrandBlock = styled.div`
     height: 140px;
     background: rgba(20, 83, 45, 0.24);
   }
+
+  @media (max-width: 768px) {
+    padding: 22px 18px 18px;
+
+    &::before {
+      top: -54px;
+      right: -24px;
+      width: 128px;
+      height: 128px;
+    }
+
+    &::after {
+      bottom: -56px;
+      left: -24px;
+      width: 112px;
+      height: 112px;
+    }
+  }
 `;
 
 const HeaderCard = styled.div`
@@ -77,6 +95,12 @@ const HeaderCard = styled.div`
     padding: 20px;
     border-radius: 24px;
   }
+
+  @media (max-width: 768px) {
+    gap: 14px;
+    padding: 16px;
+    border-radius: 22px;
+  }
 `;
 
 const HeaderBar = styled(Header)`
@@ -84,10 +108,18 @@ const HeaderBar = styled(Header)`
   padding: 20px 20px 0;
   line-height: normal;
   background: transparent;
+
+  @media (max-width: 768px) {
+    padding: 14px 14px 0;
+  }
 `;
 
 const ContentWrap = styled(Content)`
   padding: 20px;
+
+  @media (max-width: 768px) {
+    padding: 14px;
+  }
 `;
 
 const ContentInner = styled.div`
@@ -99,6 +131,51 @@ const ContentInner = styled.div`
 const SidebarFooter = styled.div`
   margin-top: auto;
   padding: 18px 18px 22px;
+
+  @media (max-width: 768px) {
+    padding: 14px 16px 18px;
+  }
+`;
+
+const HeaderContent = styled.div`
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 14px;
+  }
+`;
+
+const HeaderMain = styled.div`
+  display: flex;
+  min-width: 0;
+  align-items: flex-start;
+  gap: 16px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    gap: 12px;
+  }
+`;
+
+const HeaderCopy = styled.div`
+  min-width: 0;
+`;
+
+const HeaderTags = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+    justify-content: flex-start;
+  }
 `;
 
 const menuItems = [
@@ -175,7 +252,7 @@ const AppLayout = () => {
       ) : (
         <Drawer
           placement="left"
-          width={280}
+          width={292}
           open={drawerOpen}
           onClose={() => setDrawerOpen(false)}
           styles={{ body: { padding: 0 } }}
@@ -186,8 +263,8 @@ const AppLayout = () => {
       <Layout>
         <HeaderBar>
           <HeaderCard>
-            <Space align="start" size={16} style={{ width: '100%', justifyContent: 'space-between' }} wrap>
-              <Space align="start" size={16}>
+            <HeaderContent>
+              <HeaderMain>
                 {isMobile ? (
                   <Button
                     icon={<MenuOutlined />}
@@ -195,30 +272,45 @@ const AppLayout = () => {
                     onClick={() => setDrawerOpen(true)}
                   />
                 ) : null}
-                <div>
-                  <Typography.Text style={{ color: 'rgba(21, 128, 61, 0.9)', letterSpacing: 1.6 }}>
+                <HeaderCopy>
+                  <Typography.Text
+                    style={{
+                      color: 'rgba(21, 128, 61, 0.9)',
+                      letterSpacing: isMobile ? 1.2 : 1.6,
+                      fontSize: isMobile ? 12 : undefined,
+                    }}
+                  >
                     病情整理台
                   </Typography.Text>
-                  <Typography.Title level={2} style={{ margin: '8px 0 8px' }}>
+                  <Typography.Title level={isMobile ? 4 : 2} style={{ margin: '8px 0 8px' }}>
                     资料总览与病程回顾
                   </Typography.Title>
-                  <Typography.Paragraph style={{ marginBottom: 0, maxWidth: 760 }}>
+                  <Typography.Paragraph
+                    style={{
+                      marginBottom: 0,
+                      maxWidth: 760,
+                      fontSize: isMobile ? 14 : undefined,
+                      lineHeight: isMobile ? 1.65 : undefined,
+                    }}
+                  >
                     可以集中查看主要情况、发作与住院经过、用药变化，以及每条结论对应的原始资料。
                   </Typography.Paragraph>
-                </div>
-              </Space>
-              <Space wrap size={[8, 8]} style={{ justifyContent: 'flex-end' }}>
-                <Tag bordered={false} color="success">
-                  近期情况
-                </Tag>
-                <Tag bordered={false} color="processing">
-                  用药变化
-                </Tag>
-                <Tag bordered={false} color="warning">
-                  原始资料
-                </Tag>
-              </Space>
-            </Space>
+                </HeaderCopy>
+              </HeaderMain>
+              {!isMobile ? (
+                <HeaderTags>
+                  <Tag bordered={false} color="success">
+                    近期情况
+                  </Tag>
+                  <Tag bordered={false} color="processing">
+                    用药变化
+                  </Tag>
+                  <Tag bordered={false} color="warning">
+                    原始资料
+                  </Tag>
+                </HeaderTags>
+              ) : null}
+            </HeaderContent>
           </HeaderCard>
         </HeaderBar>
         <ContentWrap>

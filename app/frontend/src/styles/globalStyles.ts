@@ -59,6 +59,14 @@ export const GlobalStyles = createGlobalStyle<GlobalStylesProps>`
     color: #15803d;
   }
 
+  .ant-typography,
+  .ant-list-item-meta-description,
+  .ant-descriptions-item-content,
+  .ant-alert .ant-alert-message,
+  .ant-alert .ant-alert-description {
+    overflow-wrap: anywhere;
+  }
+
   .ant-app,
   .ant-layout {
     min-height: 100vh;
@@ -68,6 +76,7 @@ export const GlobalStyles = createGlobalStyle<GlobalStylesProps>`
   .ant-card {
     background: rgba(255, 255, 255, 0.84);
     border: 1px solid var(--custom-border);
+    border-radius: 24px;
     box-shadow: 0 24px 48px -32px var(--custom-shadow);
     backdrop-filter: blur(18px);
   }
@@ -110,6 +119,10 @@ export const GlobalStyles = createGlobalStyle<GlobalStylesProps>`
     font-weight: 700;
     background: linear-gradient(135deg, rgba(220, 252, 231, 0.95), rgba(187, 247, 208, 0.88)) !important;
     box-shadow: inset 0 0 0 1px rgba(134, 239, 172, 0.8);
+  }
+
+  .ant-btn {
+    border-radius: 12px;
   }
 
   .ant-btn-default,
@@ -256,5 +269,150 @@ export const GlobalStyles = createGlobalStyle<GlobalStylesProps>`
   .x-markdown hr {
     border: none;
     border-top: 1px solid rgba(134, 239, 172, 0.7);
+  }
+
+  @media (max-width: 768px) {
+    body {
+      background:
+        radial-gradient(circle at top left, rgba(74, 222, 128, 0.18), transparent 30%),
+        radial-gradient(circle at bottom right, rgba(187, 247, 208, 0.35), transparent 34%),
+        linear-gradient(180deg, #f7fff8 0%, #ecfdf5 54%, #dcfce7 100%);
+    }
+
+    .ant-card {
+      border-radius: 20px;
+      box-shadow: 0 18px 34px -28px var(--custom-shadow);
+    }
+
+    .ant-card .ant-card-head {
+      min-height: 52px;
+      padding-inline: 16px;
+    }
+
+    .ant-card .ant-card-head-title {
+      font-size: 15px;
+    }
+
+    .ant-card .ant-card-body {
+      padding: 16px;
+    }
+
+    .ant-menu-item,
+    .ant-menu-submenu-title {
+      margin-inline: 10px !important;
+      width: calc(100% - 20px) !important;
+    }
+
+    .ant-btn {
+      min-height: 38px;
+    }
+
+    .ant-btn-link {
+      min-height: auto;
+      padding-block: 2px;
+    }
+
+    .ant-alert {
+      padding: 12px 14px;
+      border-radius: 14px;
+    }
+
+    .ant-alert .ant-alert-content {
+      min-width: 0;
+    }
+
+    .ant-alert .ant-alert-action {
+      margin-inline-start: 0;
+      margin-top: 10px;
+      width: 100%;
+    }
+
+    .ant-alert .ant-alert-action .ant-btn {
+      width: 100%;
+    }
+
+    .ant-statistic .ant-statistic-content {
+      font-size: 24px;
+    }
+
+    .ant-segmented {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: 14px;
+    }
+
+    .ant-segmented::-webkit-scrollbar {
+      display: none;
+    }
+
+    .ant-segmented-group {
+      display: inline-flex;
+      min-width: max-content;
+    }
+
+    .ant-segmented-item-label {
+      padding-inline: 12px;
+      font-size: 13px;
+    }
+
+    .ant-list .ant-list-item {
+      align-items: stretch;
+      gap: 10px;
+    }
+
+    .ant-list .ant-list-item-action {
+      margin-inline-start: 0;
+    }
+
+    .ant-list .ant-list-item-action > li {
+      padding: 0;
+    }
+
+    .ant-drawer .ant-drawer-header {
+      padding: 14px 16px;
+    }
+
+    .ant-drawer .ant-drawer-title {
+      min-width: 0;
+    }
+
+    .ant-drawer .ant-drawer-body {
+      padding: 16px !important;
+    }
+
+    .ant-table-wrapper .ant-table {
+      font-size: 13px;
+    }
+
+    .ant-table-wrapper .ant-table-thead > tr > th,
+    .ant-table-wrapper .ant-table-tbody > tr > td {
+      padding: 10px 12px !important;
+    }
+
+    .x-markdown {
+      --font-size: 14px;
+      line-height: 1.72;
+    }
+
+    .x-markdown blockquote {
+      padding: 12px 14px;
+      border-radius: 12px;
+    }
+
+    .x-markdown pre {
+      padding: 14px 16px;
+      border-radius: 16px;
+      overflow-x: auto;
+    }
+
+    .x-markdown table:not(pre) {
+      display: block;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .x-markdown img {
+      border-radius: 14px;
+    }
   }
 `;

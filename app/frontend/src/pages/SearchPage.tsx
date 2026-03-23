@@ -1,12 +1,41 @@
-import { Button, Card, Empty, Input, List, Space, Typography } from 'antd';
+import { Button, Card, Empty, Grid, Input, List, Space, Typography } from 'antd';
 import { useDeferredValue, useEffect, useState } from 'react';
+import styled from 'styled-components';
 
 import { medicalApi } from '@/api/medical';
 import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
 import type { SearchItem } from '@/types/api';
 import { buildPreviewHighlightTerms, inferPreviewFileType, resolvePreviewTitle } from '@/utils/filePreview';
 
+const PageStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    gap: 16px;
+  }
+`;
+
+const ResultMeta = styled.div`
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 6px;
+`;
+
+const ResultSnippet = styled.div`
+  line-height: 1.72;
+  color: rgba(6, 95, 70, 0.74);
+  overflow-wrap: anywhere;
+`;
+
+const { useBreakpoint } = Grid;
+
 const SearchPage = () => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const [keyword, setKeyword] = useState('');
   const [results, setResults] = useState<SearchItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -54,9 +83,9 @@ const SearchPage = () => {
   };
 
   return (
-    <Space direction="vertical" size={20} style={{ width: '100%' }}>
+    <PageStack>
       <div>
-        <Typography.Title level={3}>搜索</Typography.Title>
+        <Typography.Title level={isMobile ? 4 : 3}>搜索</Typography.Title>
         <Typography.Paragraph>
           可以直接按症状、药名、检查项目或住院记录查找，适合快速定位相关资料。
         </Typography.Paragraph>
@@ -67,7 +96,7 @@ const SearchPage = () => {
             value={keyword}
             onChange={event => setKeyword(event.target.value)}
             placeholder="例如：呕吐、地西泮、住院、同型半胱氨酸"
-            enterButton="搜索"
+            enterButton={isMobile ? '查找' : '搜索'}
           />
           {!keyword.trim() ? (
             <Empty description="输入关键词开始搜索" />
@@ -86,18 +115,18 @@ const SearchPage = () => {
                     ) : null,
                   ]}
                 >
-                  <List.Item.Meta
-                    title={item.title}
-                    description={
-                      <Space direction="vertical" size={6}>
-                        <Typography.Text type="secondary">{item.relative_path}</Typography.Text>
-                        <div dangerouslySetInnerHTML={{ __html: item.snippet }} />
-                      </Space>
-                    }
-                  />
-                </List.Item>
-              )}
-            />
+                <List.Item.Meta
+                  title={item.title}
+                  description={
+                    <ResultMeta>
+                      <Typography.Text type="secondary">{item.relative_path}</Typography.Text>
+                      <ResultSnippet dangerouslySetInnerHTML={{ __html: item.snippet }} />
+                    </ResultMeta>
+                  }
+                />
+              </List.Item>
+            )}
+          />
           )}
         </Space>
       </Card>
@@ -106,7 +135,7 @@ const SearchPage = () => {
         target={previewTarget}
         onClose={() => setPreviewTarget(null)}
       />
-    </Space>
+    </PageStack>
   );
 };
 

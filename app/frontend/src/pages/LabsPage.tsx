@@ -1,6 +1,7 @@
 import { Line } from '@ant-design/plots';
-import { Button, Card, Empty, Segmented, Space, Table, Tag, Typography, theme } from 'antd';
+import { Button, Card, Empty, Grid, Segmented, Select, Space, Table, Tag, Typography, theme } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
+import styled from 'styled-components';
 
 import { medicalApi } from '@/api/medical';
 import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
@@ -34,8 +35,23 @@ function statusLabel(status: LabItem['status']): string {
   return '待判断';
 }
 
+const PageStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+
+  @media (max-width: 768px) {
+    gap: 16px;
+  }
+`;
+
+const { useBreakpoint } = Grid;
+
 const LabsPage = () => {
   const { token } = theme.useToken();
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const { data, error, loading } = useApiResource(medicalApi.getLabs, []);
   const [selectedTest, setSelectedTest] = useState<string>('');
   const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
@@ -90,9 +106,9 @@ const LabsPage = () => {
   };
 
   return (
-    <Space direction="vertical" size={20} style={{ width: '100%' }}>
+    <PageStack>
       <div>
-        <Typography.Title level={3}>检查结果</Typography.Title>
+        <Typography.Title level={isMobile ? 4 : 3}>检查结果</Typography.Title>
         <Typography.Paragraph>
           这里汇总近期整理出的检查结果，既能看列表，也能查看部分指标的变化趋势。
         </Typography.Paragraph>
@@ -104,17 +120,26 @@ const LabsPage = () => {
           </Typography.Title>
           {numericGroups.length > 0 ? (
             <>
-              <Segmented
-                value={selectedTest}
-                onChange={value => setSelectedTest(String(value))}
-                options={numericGroups.map(group => ({ label: group.name, value: group.name }))}
-              />
+              {isMobile ? (
+                <Select
+                  value={selectedTest}
+                  onChange={value => setSelectedTest(value)}
+                  options={numericGroups.map(group => ({ label: group.name, value: group.name }))}
+                  style={{ width: '100%' }}
+                />
+              ) : (
+                <Segmented
+                  value={selectedTest}
+                  onChange={value => setSelectedTest(String(value))}
+                  options={numericGroups.map(group => ({ label: group.name, value: group.name }))}
+                />
+              )}
               <Line
                 data={chartData}
                 xField="date"
                 yField="value"
                 point
-                height={280}
+                height={isMobile ? 220 : 280}
                 color={token.colorPrimary}
                 axis={{ x: { title: false }, y: { title: false } }}
               />
@@ -137,18 +162,19 @@ const LabsPage = () => {
               {
                 title: '日期',
                 dataIndex: 'result_date_text',
-                width: 140,
+                width: isMobile ? 120 : 140,
                 render: value => value || '-',
               },
               {
                 title: '项目',
                 dataIndex: 'test_name',
-                width: 180,
+                width: isMobile ? 150 : 180,
               },
               {
                 title: '分组',
                 dataIndex: 'test_group',
                 width: 120,
+                responsive: ['md'],
               },
               {
                 title: '结果',
@@ -157,12 +183,12 @@ const LabsPage = () => {
               {
                 title: '状态',
                 dataIndex: 'status',
-                width: 100,
+                width: 92,
                 render: value => <Tag color={statusColor(value)}>{statusLabel(value)}</Tag>,
               },
               {
                 title: '预览',
-                width: 120,
+                width: isMobile ? 88 : 120,
                 render: (_, record) =>
                   record.raw_url ? (
                     <Button type="link" onClick={() => openPreview(record)}>
@@ -181,7 +207,7 @@ const LabsPage = () => {
         target={previewTarget}
         onClose={() => setPreviewTarget(null)}
       />
-    </Space>
+    </PageStack>
   );
 };
 

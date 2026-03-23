@@ -6,7 +6,7 @@ import {
   PushpinOutlined,
 } from '@ant-design/icons';
 import { XMarkdown } from '@ant-design/x-markdown';
-import { Button, Card, Collapse, Empty, Input, List, Space, Tag, Typography } from 'antd';
+import { Button, Card, Collapse, Empty, Grid, Input, List, Space, Tag, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
@@ -28,12 +28,20 @@ const DocumentLayout = styled.div`
   @media (max-width: 1100px) {
     grid-template-columns: 1fr;
   }
+
+  @media (max-width: 768px) {
+    gap: 12px;
+  }
 `;
 
 const SidebarStack = styled.div`
   display: flex;
   flex-direction: column;
   gap: 12px;
+
+  @media (max-width: 768px) {
+    gap: 10px;
+  }
 `;
 
 const PriorityCard = styled.div<{ $active: boolean }>`
@@ -46,6 +54,11 @@ const PriorityCard = styled.div<{ $active: boolean }>`
       : 'rgba(255, 255, 255, 0.76)'};
   box-shadow: ${props =>
     props.$active ? '0 18px 40px -32px rgba(34, 197, 94, 0.65)' : 'none'};
+
+  @media (max-width: 768px) {
+    padding: 14px;
+    border-radius: 16px;
+  }
 `;
 
 const DocButton = styled.button<{ $active: boolean }>`
@@ -67,6 +80,11 @@ const DocButton = styled.button<{ $active: boolean }>`
     background: rgba(240, 253, 244, 0.94);
     transform: translateY(-1px);
   }
+
+  @media (max-width: 768px) {
+    padding: 12px 14px;
+    border-radius: 14px;
+  }
 `;
 
 const DocGroupList = styled.div`
@@ -80,7 +98,57 @@ const PreviewMeta = styled.div`
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+  min-width: 0;
 `;
+
+const DetailCard = styled(Card)`
+  height: 100%;
+
+  .ant-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .ant-card-body {
+      gap: 16px;
+    }
+  }
+`;
+
+const DetailHeader = styled.div`
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  @media (max-width: 768px) {
+    gap: 12px;
+  }
+`;
+
+const DetailMeta = styled.div`
+  min-width: 0;
+  flex: 1;
+`;
+
+const DetailActions = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  @media (max-width: 768px) {
+    width: 100%;
+  }
+`;
+
+const MarkdownPanel = styled.div`
+  min-width: 0;
+`;
+
+const { useBreakpoint } = Grid;
 
 const kindLabelMap: Record<string, string> = {
   main_summary: '主文档',
@@ -102,6 +170,8 @@ function resolveGroupIcon(kind: string) {
 }
 
 const DocumentsPage = () => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const { data: documents, error, loading } = useApiResource(medicalApi.getDocuments, []);
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedDocumentId, setSelectedDocumentId] = useState<number | null>(null);
@@ -198,7 +268,7 @@ const DocumentsPage = () => {
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <div>
-        <Typography.Title level={3}>文档资料</Typography.Title>
+        <Typography.Title level={isMobile ? 4 : 3}>文档资料</Typography.Title>
         <Typography.Paragraph>
           主文档放在最前面，便于先看整体情况；其他住院整理和报告目录放在后面，按需要继续展开查看。
         </Typography.Paragraph>
@@ -206,7 +276,11 @@ const DocumentsPage = () => {
 
       <DocumentLayout>
         <SidebarStack>
-          <Card variant="borderless" loading={loading} styles={{ body: { padding: 20 } }}>
+          <Card
+            variant="borderless"
+            loading={loading}
+            styles={{ body: { padding: isMobile ? 16 : 20 } }}
+          >
             {error ? <Empty description={error} /> : null}
             {!error ? (
               <SidebarStack>
@@ -236,7 +310,7 @@ const DocumentsPage = () => {
                       </div>
 
                       <Button type="primary" onClick={() => openDocument(mainDocument.id)}>
-                        查看主文档
+                        {isMobile ? '打开主文档' : '查看主文档'}
                       </Button>
                     </Space>
                   </PriorityCard>
@@ -252,6 +326,7 @@ const DocumentsPage = () => {
                 {groupedDocuments.length > 0 ? (
                   <Collapse
                     ghost
+                    size={isMobile ? 'small' : 'middle'}
                     defaultActiveKey={groupedDocuments.map(group => group.kind)}
                     items={groupedDocuments.map(group => ({
                       key: group.kind,
@@ -289,17 +364,17 @@ const DocumentsPage = () => {
           </Card>
         </SidebarStack>
 
-        <Card
+        <DetailCard
           variant="borderless"
           loading={detailLoading}
-          style={{ minHeight: 640 }}
-          styles={{ body: { padding: 24 } }}
+          style={{ minHeight: isMobile ? undefined : 640 }}
+          styles={{ body: { padding: isMobile ? 16 : 24 } }}
         >
           {detail ? (
-            <Space direction="vertical" size={20} style={{ width: '100%' }}>
-              <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
-                <div>
-                  <Typography.Title level={4} style={{ margin: 0 }}>
+            <>
+              <DetailHeader>
+                <DetailMeta>
+                  <Typography.Title level={isMobile ? 5 : 4} style={{ margin: 0 }}>
                     {detail.title}
                   </Typography.Title>
                   <PreviewMeta style={{ marginTop: 10 }}>
@@ -308,10 +383,11 @@ const DocumentsPage = () => {
                     </Tag>
                     <Typography.Text type="secondary">{detail.relative_path}</Typography.Text>
                   </PreviewMeta>
-                </div>
+                </DetailMeta>
 
-                <Space wrap>
+                <DetailActions>
                   <Button
+                    block={isMobile}
                     onClick={() =>
                       openPreview({
                         title: detail.title,
@@ -324,10 +400,12 @@ const DocumentsPage = () => {
                   >
                     侧边预览
                   </Button>
-                </Space>
-              </Space>
+                </DetailActions>
+              </DetailHeader>
 
-              <XMarkdown content={rewriteMarkdownLinks(detail.content_text, detail.relative_path)} />
+              <MarkdownPanel>
+                <XMarkdown content={rewriteMarkdownLinks(detail.content_text, detail.relative_path)} />
+              </MarkdownPanel>
 
               <div>
                 <Typography.Title level={5}>关联原始资料</Typography.Title>
@@ -373,11 +451,11 @@ const DocumentsPage = () => {
                   }}
                 />
               </div>
-            </Space>
+            </>
           ) : (
             <Empty description="请选择左侧文档" />
           )}
-        </Card>
+        </DetailCard>
       </DocumentLayout>
 
       <FilePreviewDrawer

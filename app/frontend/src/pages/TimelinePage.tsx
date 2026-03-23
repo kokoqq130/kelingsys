@@ -1,5 +1,6 @@
-import { Button, Card, Empty, Input, Segmented, Space, Tag, Timeline, Typography } from 'antd';
+import { Button, Card, Empty, Grid, Input, Segmented, Space, Tag, Timeline, Typography } from 'antd';
 import { useDeferredValue, useMemo, useState } from 'react';
+import styled from 'styled-components';
 
 import { medicalApi } from '@/api/medical';
 import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
@@ -14,7 +15,51 @@ const eventTypeMap: Record<string, { label: string; color: string }> = {
   lab: { label: '检查', color: 'green' },
 };
 
+const PageStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+
+  @media (max-width: 768px) {
+    gap: 16px;
+  }
+`;
+
+const TimelineWrap = styled.div`
+  .ant-timeline-item {
+    padding-bottom: 20px;
+  }
+
+  @media (max-width: 768px) {
+    .ant-timeline-item {
+      padding-bottom: 18px;
+    }
+
+    .ant-timeline-item-content {
+      min-width: 0;
+    }
+  }
+`;
+
+const EventContent = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+`;
+
+const EventMeta = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+`;
+
+const { useBreakpoint } = Grid;
+
 const TimelinePage = () => {
+  const screens = useBreakpoint();
+  const isMobile = !screens.md;
   const [filter, setFilter] = useState<string>('all');
   const [keyword, setKeyword] = useState('');
   const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
@@ -94,9 +139,9 @@ const TimelinePage = () => {
 
   return (
     <Card variant="borderless">
-      <Space direction="vertical" size={20} style={{ width: '100%' }}>
+      <PageStack>
         <div>
-          <Typography.Title level={3}>时间线</Typography.Title>
+          <Typography.Title level={isMobile ? 4 : 3}>时间线</Typography.Title>
           <Typography.Paragraph>
             这里按时间顺序梳理发作、住院、调药和检查，方便快速回顾每次变化。
           </Typography.Paragraph>
@@ -111,32 +156,32 @@ const TimelinePage = () => {
           onChange={event => setKeyword(event.target.value)}
           placeholder="按事件描述筛选，例如：呕吐、吡仑帕奈、血氨"
         />
-        <Timeline
-          items={filteredItems.map(item => ({
-            color: eventTypeMap[item.event_type]?.color || 'gray',
-            children: (
-              <Space direction="vertical" size={6}>
-                <Space wrap>
-                  <Typography.Text strong>{item.event_date_text || item.event_date}</Typography.Text>
-                  <Tag color={eventTypeMap[item.event_type]?.color || 'default'}>
-                    {eventTypeMap[item.event_type]?.label || item.event_type}
-                  </Tag>
-                  {item.is_hospitalized ? <Tag color="purple">住院相关</Tag> : null}
-                </Space>
-                <Typography.Text>{item.summary}</Typography.Text>
-                <Typography.Text type="secondary">{item.detail_text}</Typography.Text>
-                <Space wrap>
+        <TimelineWrap>
+          <Timeline
+            items={filteredItems.map(item => ({
+              color: eventTypeMap[item.event_type]?.color || 'gray',
+              children: (
+                <EventContent>
+                  <EventMeta>
+                    <Typography.Text strong>{item.event_date_text || item.event_date}</Typography.Text>
+                    <Tag color={eventTypeMap[item.event_type]?.color || 'default'}>
+                      {eventTypeMap[item.event_type]?.label || item.event_type}
+                    </Tag>
+                    {item.is_hospitalized ? <Tag color="purple">住院相关</Tag> : null}
+                  </EventMeta>
+                  <Typography.Text>{item.summary}</Typography.Text>
+                  <Typography.Text type="secondary">{item.detail_text}</Typography.Text>
                   {item.source_document_id || item.raw_url ? (
                     <Button type="link" onClick={() => void openPreview(item)}>
                       预览文档
                     </Button>
                   ) : null}
-                </Space>
-              </Space>
-            ),
-          }))}
-        />
-      </Space>
+                </EventContent>
+              ),
+            }))}
+          />
+        </TimelineWrap>
+      </PageStack>
       <FilePreviewDrawer
         open={previewTarget !== null}
         target={previewTarget}
