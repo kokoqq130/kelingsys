@@ -28,7 +28,7 @@ const MedicationsPage = () => {
 
   if (error) {
     return (
-      <Card bordered={false}>
+      <Card variant="borderless">
         <Empty description={error} />
       </Card>
     );
@@ -44,24 +44,24 @@ const MedicationsPage = () => {
       </div>
       <Row gutter={[20, 20]}>
         <Col xs={24} md={8}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic title="当前用药数量" value={data?.current.length ?? 0} loading={loading} />
           </Card>
         </Col>
         <Col xs={24} md={8}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic title="调药记录数量" value={data?.adjustments.length ?? 0} loading={loading} />
           </Card>
         </Col>
         <Col xs={24} md={8}>
-          <Card bordered={false}>
+          <Card variant="borderless">
             <Statistic title="用药分类数" value={categories.length} loading={loading} />
           </Card>
         </Col>
       </Row>
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={11}>
-          <Card bordered={false} title="当前用药" loading={loading}>
+          <Card variant="borderless" title="当前用药" loading={loading}>
             <Space direction="vertical" size={16} style={{ width: '100%' }}>
               <Input
                 value={keyword}
@@ -110,7 +110,7 @@ const MedicationsPage = () => {
           </Card>
         </Col>
         <Col xs={24} xl={13}>
-          <Card bordered={false} title="调药时间轴" loading={loading}>
+          <Card variant="borderless" title="调药时间轴" loading={loading}>
             <Timeline
               items={(data?.adjustments ?? []).map(item => ({
                 color: 'gold',

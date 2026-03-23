@@ -39,7 +39,7 @@ const FilesPage = () => {
           这里直接浏览工作区里的原始 Markdown、图片和 PDF，适合回溯“某个结论到底来自哪份原始资料”。
         </Typography.Paragraph>
       </div>
-      <Card bordered={false}>
+      <Card variant="borderless">
         {error ? <Empty description={error} /> : null}
         {!error ? (
           <Space direction="vertical" size={16} style={{ width: '100%' }}>

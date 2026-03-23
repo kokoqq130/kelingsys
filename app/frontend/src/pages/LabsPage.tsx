@@ -1,5 +1,5 @@
 import { Line } from '@ant-design/plots';
-import { Button, Card, Empty, Segmented, Space, Table, Tag, Typography } from 'antd';
+import { Button, Card, Empty, Segmented, Space, Table, Tag, Typography, theme } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
 import { medicalApi } from '@/api/medical';
@@ -20,6 +20,7 @@ function statusColor(status: LabItem['status']): string {
 }
 
 const LabsPage = () => {
+  const { token } = theme.useToken();
   const { data, error, loading } = useApiResource(medicalApi.getLabs, []);
   const [selectedTest, setSelectedTest] = useState<string>('');
 
@@ -65,7 +66,7 @@ const LabsPage = () => {
           当前先按结构化列表展示，下一轮再补趋势图和重点指标可视化。
         </Typography.Paragraph>
       </div>
-      <Card bordered={false}>
+      <Card variant="borderless">
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
           <Typography.Title level={5} style={{ margin: 0 }}>
             指标趋势
@@ -83,7 +84,7 @@ const LabsPage = () => {
                 yField="value"
                 point
                 height={280}
-                color="#2e6a6a"
+                color={token.colorPrimary}
                 axis={{ x: { title: false }, y: { title: false } }}
               />
             </>
@@ -92,7 +93,7 @@ const LabsPage = () => {
           )}
         </Space>
       </Card>
-      <Card bordered={false}>
+      <Card variant="borderless">
         {error ? <Empty description={error} /> : null}
         {!error ? (
           <Table<LabItem>

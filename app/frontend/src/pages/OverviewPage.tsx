@@ -1,4 +1,4 @@
-import { Alert, App, Button, Card, Col, Descriptions, Empty, List, Progress, Row, Space, Statistic, Tag, Typography } from 'antd';
+import { Alert, App, Button, Card, Col, Descriptions, Empty, List, Progress, Row, Space, Statistic, Tag, Typography, theme } from 'antd';
 
 import { medicalApi } from '@/api/medical';
 import StatusBanner from '@/components/StatusBanner';
@@ -26,6 +26,7 @@ function resolveDocumentKindLabel(value?: string): string {
 
 const OverviewPage = () => {
   const { message } = App.useApp();
+  const { token } = theme.useToken();
   const { data, error, loading, reload } = useApiResource(medicalApi.getOverview, []);
 
   const handleReindex = async () => {
@@ -40,7 +41,7 @@ const OverviewPage = () => {
 
   if (error || !data) {
     return (
-      <Card bordered={false}>
+      <Card variant="borderless">
         <Empty description={error || '暂时没有读取到总览数据'} />
       </Card>
     );
@@ -54,14 +55,14 @@ const OverviewPage = () => {
           <Card
             bordered={false}
             extra={
-              <Button onClick={() => void handleReindex()}>
+              <Button type="primary" onClick={() => void handleReindex()}>
                 重建索引
               </Button>
             }
           >
             <Space direction="vertical" size={18} style={{ width: '100%' }}>
               <div>
-                <Typography.Text style={{ color: '#b45c2f', letterSpacing: 2 }}>
+                <Typography.Text style={{ color: token.colorPrimaryActive, letterSpacing: 2 }}>
                   PATIENT OVERVIEW
                 </Typography.Text>
                 <Typography.Title level={2} style={{ marginTop: 8, marginBottom: 10 }}>
@@ -98,22 +99,22 @@ const OverviewPage = () => {
         <Col xs={24} xl={9}>
           <Row gutter={[20, 20]}>
             <Col span={12}>
-              <Card bordered={false}>
+              <Card variant="borderless">
                 <Statistic title="文件总数" value={data.stats.file_count} />
               </Card>
             </Col>
             <Col span={12}>
-              <Card bordered={false}>
+              <Card variant="borderless">
                 <Statistic title="事件总数" value={data.stats.event_count} />
               </Card>
             </Col>
             <Col span={12}>
-              <Card bordered={false}>
+              <Card variant="borderless">
                 <Statistic title="文档总数" value={data.stats.document_count} />
               </Card>
             </Col>
             <Col span={12}>
-              <Card bordered={false}>
+              <Card variant="borderless">
                 <Statistic title="检查记录" value={data.stats.lab_count} />
               </Card>
             </Col>
@@ -122,7 +123,7 @@ const OverviewPage = () => {
       </Row>
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={12}>
-          <Card bordered={false} title="当前用药">
+          <Card variant="borderless" title="当前用药">
             <List
               dataSource={data.current_medications}
               renderItem={item => (
@@ -142,7 +143,7 @@ const OverviewPage = () => {
           </Card>
         </Col>
         <Col xs={24} xl={12}>
-          <Card bordered={false} title="近期提醒">
+          <Card variant="borderless" title="近期提醒">
             <Space direction="vertical" size={14} style={{ width: '100%' }}>
               <div>
                 <Typography.Text strong>最近一次发作</Typography.Text>
@@ -170,7 +171,7 @@ const OverviewPage = () => {
       </Row>
       <Row gutter={[20, 20]}>
         <Col xs={24} xl={8}>
-          <Card bordered={false} title="事件结构">
+          <Card variant="borderless" title="事件结构">
             <Space direction="vertical" size={14} style={{ width: '100%' }}>
               {data.event_type_stats.map(item => (
                 <div key={item.event_type}>
@@ -181,7 +182,7 @@ const OverviewPage = () => {
                   <Progress
                     percent={Math.round((item.count / Math.max(data.stats.event_count, 1)) * 100)}
                     showInfo={false}
-                    strokeColor="#2e6a6a"
+                    strokeColor={token.colorPrimary}
                   />
                 </div>
               ))}
@@ -189,7 +190,7 @@ const OverviewPage = () => {
           </Card>
         </Col>
         <Col xs={24} xl={8}>
-          <Card bordered={false} title="资料结构">
+          <Card variant="borderless" title="资料结构">
             <Space direction="vertical" size={14} style={{ width: '100%' }}>
               {data.file_type_stats.map(item => (
                 <div key={item.file_type}>
@@ -200,7 +201,7 @@ const OverviewPage = () => {
                   <Progress
                     percent={Math.round((item.count / Math.max(data.stats.file_count, 1)) * 100)}
                     showInfo={false}
-                    strokeColor="#b45c2f"
+                    strokeColor={token.colorWarning}
                   />
                 </div>
               ))}
@@ -217,7 +218,7 @@ const OverviewPage = () => {
           </Card>
         </Col>
         <Col xs={24} xl={8}>
-          <Card bordered={false} title="近期异常检查">
+          <Card variant="borderless" title="近期异常检查">
             <Space direction="vertical" size={12} style={{ width: '100%' }}>
               {data.abnormal_labs.length > 0 ? (
                 data.abnormal_labs.map(item => (

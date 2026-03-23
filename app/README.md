@@ -9,16 +9,32 @@
 
 ### 方式 1：分别启动
 
-1. 后端：
+1. 前端：
+
+在 `app/frontend/` 目录下可以直接运行：
+
+```powershell
+pnpm run dev
+```
+
+也可以从项目根目录运行：
+
+```powershell
+.\scripts\Start-Frontend.ps1
+```
+
+2. 后端：
+
+后端统一通过项目内虚拟环境 `app/backend/.venv` 启动。首次启动时，脚本会自动创建虚拟环境并安装 `requirements.txt`：
 
 ```powershell
 .\scripts\Start-Backend.ps1
 ```
 
-2. 前端：
+如需后端热重载，可显式加上：
 
 ```powershell
-.\scripts\Start-Frontend.ps1
+.\scripts\Start-Backend.ps1 -Reload
 ```
 
 ### 方式 2：一键启动

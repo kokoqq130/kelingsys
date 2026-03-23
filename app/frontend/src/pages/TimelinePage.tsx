@@ -51,19 +51,19 @@ const TimelinePage = () => {
   }, [data]);
 
   if (loading) {
-    return <Card bordered={false}>正在加载时间线...</Card>;
+    return <Card variant="borderless">正在加载时间线...</Card>;
   }
 
   if (error || !data) {
     return (
-      <Card bordered={false}>
+      <Card variant="borderless">
         <Empty description={error || '暂时没有时间线数据'} />
       </Card>
     );
   }
 
   return (
-    <Card bordered={false}>
+    <Card variant="borderless">
       <Space direction="vertical" size={20} style={{ width: '100%' }}>
         <div>
           <Typography.Title level={3}>时间线</Typography.Title>

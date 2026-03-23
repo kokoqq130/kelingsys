@@ -100,7 +100,7 @@ const DocumentsPage = () => {
         </Typography.Paragraph>
       </div>
       <DocumentLayout>
-        <Card bordered={false} loading={loading} style={{ minHeight: 640 }}>
+        <Card variant="borderless" loading={loading} style={{ minHeight: 640 }}>
           {error ? <Empty description={error} /> : null}
           {!error ? (
             <Space direction="vertical" size={16} style={{ width: '100%' }}>
@@ -125,7 +125,7 @@ const DocumentsPage = () => {
             </Space>
           ) : null}
         </Card>
-        <Card bordered={false} loading={detailLoading} style={{ minHeight: 640 }}>
+        <Card variant="borderless" loading={detailLoading} style={{ minHeight: 640 }}>
           {detail ? (
             <Space direction="vertical" size={20} style={{ width: '100%' }}>
               <Space wrap>

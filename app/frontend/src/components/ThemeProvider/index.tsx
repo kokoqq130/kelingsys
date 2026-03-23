@@ -9,7 +9,7 @@ const ThemeProvider = ({ children }: PropsWithChildren) => (
   <ConfigProvider
     theme={{
       algorithm: theme.defaultAlgorithm,
-      cssVar: true,
+      cssVar: {},
       hashed: false,
       ...appTheme,
     }}

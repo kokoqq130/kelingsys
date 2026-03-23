@@ -32,7 +32,7 @@ const SearchPage = () => {
           当前已接入全文搜索，中文关键词会先尝试 FTS，再自动回退到文本匹配。
         </Typography.Paragraph>
       </div>
-      <Card bordered={false}>
+      <Card variant="borderless">
         <Space direction="vertical" size={16} style={{ width: '100%' }}>
           <Input.Search
             value={keyword}
