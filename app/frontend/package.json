@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:share": "node ./scripts/build-share.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

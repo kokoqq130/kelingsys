@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 
 import { Alert, Button, Space } from 'antd';
 
-import { medicalApi } from '@/api/medical';
+import { medicalApi, medicalApiCapabilities } from '@/api/medical';
 import { useApiResource } from '@/hooks/useApiResource';
 
 interface StatusBannerProps {
@@ -40,8 +40,8 @@ const StatusBanner = ({ action }: StatusBannerProps) => {
       type="success"
       showIcon
       action={action}
-      message="资料读取正常"
-      description={`最近整理时间：${health?.indexed_at || '未记录'}`}
+      message={medicalApiCapabilities.dataSourceMode === 'static' ? '分享资料已准备好' : '资料读取正常'}
+      description={`${medicalApiCapabilities.dataSourceMode === 'static' ? '分享包生成时间' : '最近整理时间'}：${health?.indexed_at || '未记录'}`}
     />
   );
 };

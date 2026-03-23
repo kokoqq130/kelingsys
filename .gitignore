@@ -11,6 +11,7 @@ app/backend/.ruff_cache/
 app/frontend/node_modules/
 app/frontend/dist/
 app/frontend/.vite/
+app/frontend/.share-public/
 app/frontend/*.tsbuildinfo
 app/frontend/vite.config.js
 app/frontend/vite.config.d.ts

@@ -50,6 +50,38 @@ pnpm run dev
 - 前端：`http://127.0.0.1:5173`
 - 后端：`http://127.0.0.1:8000`
 
+## 分享发布
+
+### 双模式约定
+
+- 开发模式：继续使用当前 FastAPI 接口，前端通过 `/api/*` 和 `/raw/*` 读取资料。
+- 分享模式：构建时自动重建索引、导出 `static-data/*.json`，并把 `柯灵用` 下的原始资料复制为静态 `raw/*` 文件。
+
+### 本地生成分享包
+
+在 `app/frontend/` 下执行：
+
+```powershell
+pnpm run build:share
+```
+
+也可以从项目根目录执行：
+
+```powershell
+.\scripts\Build-ShareSite.ps1
+```
+
+构建完成后，分享站点产物位于 `app/frontend/dist/`。
+
+### GitHub Actions + EdgeOne Pages
+
+- 仓库内提供了 `.github/workflows/deploy-share-to-edgeone.yml`。
+- 该工作流会自动安装后端依赖、构建前端分享包，并上传 `dist` 产物。
+- 如需直接部署到 EdgeOne Pages，请在 GitHub 仓库中配置：
+  - Secret：`EDGEONE_API_TOKEN`
+  - Variable：`EDGEONE_PROJECT_NAME`
+- 工作流默认手动触发，并支持选择 `preview` 或 `production` 环境。
+
 ## 当前能力
 
 - 总览

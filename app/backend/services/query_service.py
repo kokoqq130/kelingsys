@@ -243,6 +243,21 @@ class QueryService:
       ],
     }
 
+  def get_search_index(self) -> list[dict]:
+    rows = self.connection.execute(
+      """
+      SELECT
+        d.id AS document_id,
+        d.title,
+        d.content_text,
+        f.relative_path
+      FROM documents d
+      JOIN files f ON f.id = d.file_id
+      ORDER BY d.id
+      """
+    ).fetchall()
+    return [dict(row) | {"raw_url": self._raw_url(row["relative_path"])} for row in rows]
+
   def search(self, keyword: str) -> list[dict]:
     if not keyword.strip():
       return []

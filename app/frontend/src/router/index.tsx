@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react';
-import { createBrowserRouter } from 'react-router-dom';
+import { createBrowserRouter, createHashRouter } from 'react-router-dom';
 
+import { routerMode } from '@/api/runtime';
 import AppLayout from '@/layouts/AppLayout';
 import ThemeProvider from '@/components/ThemeProvider';
 
 const withTheme = (element: ReactNode) => <ThemeProvider>{element}</ThemeProvider>;
 
-export const router = createBrowserRouter([
+const createRouter = routerMode === 'hash' ? createHashRouter : createBrowserRouter;
+
+export const router = createRouter([
   {
     path: '/',
     element: withTheme(<AppLayout />),

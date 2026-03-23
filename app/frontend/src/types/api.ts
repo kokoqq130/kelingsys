@@ -89,6 +89,14 @@ export interface SearchItem {
   raw_url?: string | null;
 }
 
+export interface SearchIndexItem {
+  document_id: number;
+  title: string;
+  relative_path: string;
+  raw_url?: string | null;
+  content_text: string;
+}
+
 export interface CountStatItem {
   event_type?: string;
   file_type?: string;

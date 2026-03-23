@@ -13,7 +13,7 @@ import { Alert, App, Button, Card, Empty, Space, Statistic, Tag, Typography, the
 import { useMemo, useState } from 'react';
 import styled from 'styled-components';
 
-import { medicalApi } from '@/api/medical';
+import { medicalApi, medicalApiCapabilities } from '@/api/medical';
 import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
 import StatusBanner from '@/components/StatusBanner';
 import { useApiResource } from '@/hooks/useApiResource';
@@ -337,6 +337,10 @@ const OverviewPage = () => {
   const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
 
   const handleReindex = async () => {
+    if (!medicalApiCapabilities.supportsReindex) {
+      message.info('分享模式下不能在线刷新，请重新生成分享包。');
+      return;
+    }
     await medicalApi.reindex();
     message.success('资料已刷新');
     await reload();
@@ -495,9 +499,11 @@ const OverviewPage = () => {
               <Kicker>资料总览</Kicker>
               <HeroTitle level={2}>{patientName} 的当前情况</HeroTitle>
             </HeaderMeta>
-            <Button type="primary" icon={<ReloadOutlined />} onClick={() => void handleReindex()}>
-              刷新资料
-            </Button>
+            {medicalApiCapabilities.supportsReindex ? (
+              <Button type="primary" icon={<ReloadOutlined />} onClick={() => void handleReindex()}>
+                刷新资料
+              </Button>
+            ) : null}
           </CardHeader>
 
           <SoftPanel>

@@ -3,9 +3,13 @@ import react from '@vitejs/plugin-react';
 import { resolve } from 'node:path';
 
 const backendTarget = 'http://127.0.0.1:8000';
+const sharePublicDir = process.env.VITE_SHARE_PUBLIC_DIR
+  ? resolve(__dirname, process.env.VITE_SHARE_PUBLIC_DIR)
+  : false;
 
 export default defineConfig({
   plugins: [react()],
+  publicDir: sharePublicDir,
   resolve: {
     alias: {
       '@': resolve(__dirname, './src'),
