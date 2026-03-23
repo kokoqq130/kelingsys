@@ -79,8 +79,9 @@ pnpm run build:share
 - 该工作流会自动安装后端依赖、构建前端分享包，并上传 `dist` 产物。
 - 如需直接部署到 EdgeOne Pages，请在 GitHub 仓库中配置：
   - Secret：`EDGEONE_API_TOKEN`
-  - Variable：`EDGEONE_PROJECT_NAME`
-- 工作流默认手动触发，并支持选择 `preview` 或 `production` 环境。
+- 工作流默认手动触发，并支持填写：
+  - `deploy_env`：`preview` 或 `production`
+  - `project_name`：EdgeOne Pages 项目名，例如 `kelingsys-share`
 
 ## 当前能力
 

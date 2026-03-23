@@ -11,13 +11,19 @@ on:
         options:
           - preview
           - production
+      project_name:
+        description: EdgeOne Pages project name
+        required: true
+        default: kelingsys-share
+        type: string
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
     env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
       EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
-      EDGEONE_PROJECT_NAME: ${{ vars.EDGEONE_PROJECT_NAME }}
+      EDGEONE_PROJECT_NAME: ${{ inputs.project_name }}
 
     steps:
       - name: Checkout repository
