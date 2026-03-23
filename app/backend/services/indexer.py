@@ -504,7 +504,9 @@ def _parse_main_summary(document: DocumentRecord) -> dict[str, list[dict] | dict
           )
 
     elif section == "medications":
-      if plain.startswith("- ") and plain.endswith("：") and "治疗" in plain:
+      if plain.startswith("- ") and plain.endswith("：") and any(
+        keyword in plain for keyword in ["治疗", "用药"]
+      ):
         current_category = plain[2:-1].strip()
       elif plain.startswith("- ") and "：" in plain and current_category:
         name, dose_text = plain[2:].split("：", 1)

@@ -1,14 +1,22 @@
 import { Button, Card, Col, Empty, Input, List, Row, Segmented, Space, Statistic, Tag, Timeline, Typography } from 'antd';
 import { useDeferredValue, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import { medicalApi } from '@/api/medical';
+import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
 import { useApiResource } from '@/hooks/useApiResource';
+import type { MedicationAdjustmentItem, MedicationItem } from '@/types/api';
+import {
+  buildPreviewHighlightTerms,
+  inferPreviewFileType,
+  resolvePreviewPath,
+  resolvePreviewTitle,
+} from '@/utils/filePreview';
 
 const MedicationsPage = () => {
   const { data, error, loading } = useApiResource(medicalApi.getMedications, []);
   const [category, setCategory] = useState<string>('all');
   const [keyword, setKeyword] = useState('');
+  const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
   const deferredKeyword = useDeferredValue(keyword);
 
   const categories = useMemo(() => {
@@ -25,6 +33,60 @@ const MedicationsPage = () => {
       return matchesCategory && matchesKeyword;
     });
   }, [category, data, deferredKeyword]);
+
+  const openMedicationPreview = async (item: MedicationItem) => {
+    try {
+      let previewPath = resolvePreviewPath(undefined, item.raw_url);
+      let rawUrl = item.raw_url;
+      let markdownContent: string | undefined;
+
+      if (!rawUrl && item.document_id) {
+        const detail = await medicalApi.getDocumentDetail(item.document_id);
+        previewPath = detail.relative_path;
+        rawUrl = detail.raw_url ?? undefined;
+        markdownContent = detail.content_text;
+      }
+
+      setPreviewTarget({
+        title: resolvePreviewTitle(previewPath, item.name),
+        relativePath: previewPath,
+        rawUrl,
+        fileType: inferPreviewFileType(previewPath, rawUrl ? undefined : 'markdown'),
+        markdownContent,
+        highlightLabel: item.name,
+        highlightTerms: buildPreviewHighlightTerms(item.name, item.dose_text, item.note),
+      });
+    } catch {
+      return;
+    }
+  };
+
+  const openAdjustmentPreview = async (item: MedicationAdjustmentItem) => {
+    try {
+      let relativePath = item.relative_path;
+      let rawUrl = item.raw_url;
+      let markdownContent: string | undefined;
+
+      if (!rawUrl && item.document_id) {
+        const detail = await medicalApi.getDocumentDetail(item.document_id);
+        relativePath = detail.relative_path;
+        rawUrl = detail.raw_url ?? undefined;
+        markdownContent = detail.content_text;
+      }
+
+      setPreviewTarget({
+        title: resolvePreviewTitle(relativePath, item.summary),
+        relativePath,
+        rawUrl,
+        fileType: inferPreviewFileType(relativePath, rawUrl ? undefined : 'markdown'),
+        markdownContent,
+        highlightLabel: item.summary,
+        highlightTerms: buildPreviewHighlightTerms(item.summary, item.detail_text, item.event_date_text),
+      });
+    } catch {
+      return;
+    }
+  };
 
   if (error) {
     return (
@@ -76,36 +138,31 @@ const MedicationsPage = () => {
                   ...categories.map(item => ({ label: item, value: item })),
                 ]}
               />
-            <List
-              dataSource={currentMedications}
-              locale={{ emptyText: '暂无当前用药数据' }}
-              renderItem={item => (
-                <List.Item
-                  actions={[
-                    item.raw_url ? (
-                      <Button key="open" type="link" href={item.raw_url} target="_blank">
-                        来源
-                      </Button>
-                    ) : null,
-                    item.document_id ? (
-                      <Link key="doc" to={`/documents?documentId=${item.document_id}`}>
-                        查看文档
-                      </Link>
-                    ) : null,
-                  ]}
-                >
-                  <List.Item.Meta
-                    title={
-                      <Space wrap>
-                        <span>{item.name}</span>
-                        <Tag>{item.category}</Tag>
-                      </Space>
-                    }
-                    description={item.dose_text}
-                  />
-                </List.Item>
-              )}
-            />
+              <List
+                dataSource={currentMedications}
+                locale={{ emptyText: '暂无当前用药数据' }}
+                renderItem={item => (
+                  <List.Item
+                    actions={[
+                      item.raw_url || item.document_id ? (
+                        <Button key="preview" type="link" onClick={() => void openMedicationPreview(item)}>
+                          预览来源
+                        </Button>
+                      ) : null,
+                    ]}
+                  >
+                    <List.Item.Meta
+                      title={
+                        <Space wrap>
+                          <span>{item.name}</span>
+                          <Tag>{item.category}</Tag>
+                        </Space>
+                      }
+                      description={item.dose_text}
+                    />
+                  </List.Item>
+                )}
+              />
             </Space>
           </Card>
         </Col>
@@ -120,10 +177,9 @@ const MedicationsPage = () => {
                     <Typography.Text>{item.summary}</Typography.Text>
                     <Typography.Text type="secondary">{item.detail_text}</Typography.Text>
                     <Space wrap>
-                      <Link to={`/documents?documentId=${item.document_id}`}>查看对应文档</Link>
-                      {item.raw_url ? (
-                        <Button type="link" href={item.raw_url} target="_blank">
-                          打开原文
+                      {item.raw_url || item.document_id ? (
+                        <Button type="link" onClick={() => void openAdjustmentPreview(item)}>
+                          预览文档
                         </Button>
                       ) : null}
                     </Space>
@@ -134,6 +190,11 @@ const MedicationsPage = () => {
           </Card>
         </Col>
       </Row>
+      <FilePreviewDrawer
+        open={previewTarget !== null}
+        target={previewTarget}
+        onClose={() => setPreviewTarget(null)}
+      />
     </Space>
   );
 };

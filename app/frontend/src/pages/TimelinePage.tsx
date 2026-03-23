@@ -1,9 +1,11 @@
 import { Button, Card, Empty, Input, Segmented, Space, Tag, Timeline, Typography } from 'antd';
 import { useDeferredValue, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import { medicalApi } from '@/api/medical';
+import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
 import { useApiResource } from '@/hooks/useApiResource';
+import type { EventItem } from '@/types/api';
+import { buildPreviewHighlightTerms, inferPreviewFileType, resolvePreviewTitle } from '@/utils/filePreview';
 
 const eventTypeMap: Record<string, { label: string; color: string }> = {
   seizure: { label: '发作', color: 'red' },
@@ -15,6 +17,7 @@ const eventTypeMap: Record<string, { label: string; color: string }> = {
 const TimelinePage = () => {
   const [filter, setFilter] = useState<string>('all');
   const [keyword, setKeyword] = useState('');
+  const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
   const deferredKeyword = useDeferredValue(keyword);
   const { data, error, loading } = useApiResource(medicalApi.getTimeline, []);
 
@@ -49,6 +52,33 @@ const TimelinePage = () => {
       })),
     );
   }, [data]);
+
+  const openPreview = async (item: EventItem) => {
+    try {
+      let relativePath = item.relative_path;
+      let rawUrl = item.raw_url;
+      let markdownContent: string | undefined;
+
+      if (!rawUrl && item.source_document_id) {
+        const detail = await medicalApi.getDocumentDetail(item.source_document_id);
+        relativePath = detail.relative_path;
+        rawUrl = detail.raw_url ?? undefined;
+        markdownContent = detail.content_text;
+      }
+
+      setPreviewTarget({
+        title: resolvePreviewTitle(relativePath, item.title),
+        relativePath: relativePath,
+        rawUrl,
+        fileType: inferPreviewFileType(relativePath, rawUrl ? undefined : 'markdown'),
+        markdownContent,
+        highlightLabel: item.title || item.summary,
+        highlightTerms: buildPreviewHighlightTerms(item.title, item.summary, item.detail_text),
+      });
+    } catch {
+      return;
+    }
+  };
 
   if (loading) {
     return <Card variant="borderless">正在加载时间线...</Card>;
@@ -96,10 +126,9 @@ const TimelinePage = () => {
                 <Typography.Text>{item.summary}</Typography.Text>
                 <Typography.Text type="secondary">{item.detail_text}</Typography.Text>
                 <Space wrap>
-                  <Link to={`/documents?documentId=${item.source_document_id}`}>查看对应文档</Link>
-                  {item.raw_url ? (
-                    <Button type="link" href={item.raw_url} target="_blank">
-                      打开原始文件
+                  {item.source_document_id || item.raw_url ? (
+                    <Button type="link" onClick={() => void openPreview(item)}>
+                      预览文档
                     </Button>
                   ) : null}
                 </Space>
@@ -108,6 +137,11 @@ const TimelinePage = () => {
           }))}
         />
       </Space>
+      <FilePreviewDrawer
+        open={previewTarget !== null}
+        target={previewTarget}
+        onClose={() => setPreviewTarget(null)}
+      />
     </Card>
   );
 };

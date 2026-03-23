@@ -2,8 +2,10 @@ import { Button, Card, Empty, Input, Segmented, Space, Table, Tag, Typography } 
 import { useDeferredValue, useMemo, useState } from 'react';
 
 import { medicalApi } from '@/api/medical';
+import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
 import { useApiResource } from '@/hooks/useApiResource';
 import type { FileItem } from '@/types/api';
+import { inferPreviewFileType } from '@/utils/filePreview';
 
 const typeColorMap: Record<string, string> = {
   markdown: 'processing',
@@ -22,6 +24,7 @@ const typeLabelMap: Record<string, string> = {
 const FilesPage = () => {
   const [fileType, setFileType] = useState<string>('all');
   const [keyword, setKeyword] = useState('');
+  const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
   const deferredKeyword = useDeferredValue(keyword);
   const { data, error, loading } = useApiResource(medicalApi.getFiles, []);
 
@@ -37,6 +40,19 @@ const FilesPage = () => {
       return matchesType && matchesKeyword;
     });
   }, [data, deferredKeyword, fileType]);
+
+  const openPreview = (item: FileItem) => {
+    if (!item.raw_url) {
+      return;
+    }
+
+    setPreviewTarget({
+      title: item.file_name,
+      relativePath: item.relative_path,
+      rawUrl: item.raw_url,
+      fileType: inferPreviewFileType(item.relative_path, item.file_type),
+    });
+  };
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -96,13 +112,14 @@ const FilesPage = () => {
                 },
                 {
                   title: '操作',
-                  dataIndex: 'raw_url',
                   width: 100,
-                  render: value =>
-                    value ? (
-                      <Button type="link" href={value} target="_blank">
-                        打开
-                      </Button>
+                  render: (_, record) =>
+                    record.raw_url ? (
+                      <Space size={4}>
+                        <Button type="link" onClick={() => openPreview(record)}>
+                          预览
+                        </Button>
+                      </Space>
                     ) : (
                       '-'
                     ),
@@ -112,6 +129,11 @@ const FilesPage = () => {
           </Space>
         ) : null}
       </Card>
+      <FilePreviewDrawer
+        open={previewTarget !== null}
+        target={previewTarget}
+        onClose={() => setPreviewTarget(null)}
+      />
     </Space>
   );
 };

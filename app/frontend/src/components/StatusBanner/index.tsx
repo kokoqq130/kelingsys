@@ -1,9 +1,15 @@
+import type { ReactNode } from 'react';
+
 import { Alert, Button, Space } from 'antd';
 
 import { medicalApi } from '@/api/medical';
 import { useApiResource } from '@/hooks/useApiResource';
 
-const StatusBanner = () => {
+interface StatusBannerProps {
+  action?: ReactNode;
+}
+
+const StatusBanner = ({ action }: StatusBannerProps) => {
   const { data: health, error, loading, reload } = useApiResource(medicalApi.getHealth, []);
 
   if (loading) {
@@ -16,6 +22,7 @@ const StatusBanner = () => {
         type="warning"
         showIcon
         message="暂时无法读取资料"
+        action={action}
         description={
           <Space direction="vertical" size={8}>
             <span>{error}</span>
@@ -32,6 +39,7 @@ const StatusBanner = () => {
     <Alert
       type="success"
       showIcon
+      action={action}
       message="资料读取正常"
       description={`最近整理时间：${health?.indexed_at || '未记录'}`}
     />

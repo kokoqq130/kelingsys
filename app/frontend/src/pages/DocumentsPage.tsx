@@ -1,23 +1,85 @@
-import { Button, Card, Empty, Input, List, Space, Tree, Typography } from 'antd';
-import { useEffect, useMemo, useState } from 'react';
+import {
+  FileProtectOutlined,
+  FileTextOutlined,
+  FolderOpenOutlined,
+  PictureOutlined,
+  PushpinOutlined,
+} from '@ant-design/icons';
 import { XMarkdown } from '@ant-design/x-markdown';
+import { Button, Card, Collapse, Empty, Input, List, Space, Tag, Typography } from 'antd';
+import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import styled from 'styled-components';
 
 import { medicalApi } from '@/api/medical';
+import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
 import { useApiResource } from '@/hooks/useApiResource';
 import type { DocumentDetail, DocumentItem } from '@/types/api';
+import { inferPreviewFileType, resolvePreviewTitle } from '@/utils/filePreview';
 import { rewriteMarkdownLinks } from '@/utils/markdown';
 
 const DocumentLayout = styled.div`
   display: grid;
-  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
   width: 100%;
 
-  @media (max-width: 992px) {
+  @media (max-width: 1100px) {
     grid-template-columns: 1fr;
   }
+`;
+
+const SidebarStack = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+`;
+
+const PriorityCard = styled.div<{ $active: boolean }>`
+  padding: 16px;
+  border: 1px solid ${props => (props.$active ? 'rgba(34, 197, 94, 0.88)' : 'rgba(187, 247, 208, 0.82)')};
+  border-radius: 18px;
+  background: ${props =>
+    props.$active
+      ? 'linear-gradient(180deg, rgba(220, 252, 231, 0.92), rgba(187, 247, 208, 0.78))'
+      : 'rgba(255, 255, 255, 0.76)'};
+  box-shadow: ${props =>
+    props.$active ? '0 18px 40px -32px rgba(34, 197, 94, 0.65)' : 'none'};
+`;
+
+const DocButton = styled.button<{ $active: boolean }>`
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid ${props => (props.$active ? 'rgba(34, 197, 94, 0.88)' : 'rgba(187, 247, 208, 0.7)')};
+  border-radius: 16px;
+  color: inherit;
+  text-align: left;
+  background: ${props =>
+    props.$active
+      ? 'linear-gradient(180deg, rgba(220, 252, 231, 0.9), rgba(187, 247, 208, 0.75))'
+      : 'rgba(255, 255, 255, 0.72)'};
+  cursor: pointer;
+  transition: 0.2s ease;
+
+  &:hover {
+    border-color: rgba(34, 197, 94, 0.88);
+    background: rgba(240, 253, 244, 0.94);
+    transform: translateY(-1px);
+  }
+`;
+
+const DocGroupList = styled.div`
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+`;
+
+const PreviewMeta = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
 `;
 
 const kindLabelMap: Record<string, string> = {
@@ -27,6 +89,18 @@ const kindLabelMap: Record<string, string> = {
   other: '其他文档',
 };
 
+const groupOrder = ['admission_note', 'report_index', 'other'];
+
+function resolveGroupIcon(kind: string) {
+  if (kind === 'admission_note') {
+    return <FileProtectOutlined />;
+  }
+  if (kind === 'report_index') {
+    return <FolderOpenOutlined />;
+  }
+  return <FileTextOutlined />;
+}
+
 const DocumentsPage = () => {
   const { data: documents, error, loading } = useApiResource(medicalApi.getDocuments, []);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -34,6 +108,12 @@ const DocumentsPage = () => {
   const [detail, setDetail] = useState<DocumentDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [keyword, setKeyword] = useState('');
+  const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
+
+  const mainDocument = useMemo(
+    () => (documents ?? []).find(item => item.doc_kind === 'main_summary') ?? null,
+    [documents],
+  );
 
   useEffect(() => {
     const queryDocumentId = searchParams.get('documentId');
@@ -45,11 +125,19 @@ const DocumentsPage = () => {
       return;
     }
 
-    if (!documents?.length || selectedDocumentId) {
+    if (selectedDocumentId) {
       return;
     }
-    setSelectedDocumentId(documents[0].id);
-  }, [documents, searchParams, selectedDocumentId]);
+
+    if (mainDocument) {
+      setSelectedDocumentId(mainDocument.id);
+      return;
+    }
+
+    if (documents?.length) {
+      setSelectedDocumentId(documents[0].id);
+    }
+  }, [documents, mainDocument, searchParams, selectedDocumentId]);
 
   useEffect(() => {
     if (!selectedDocumentId) {
@@ -63,100 +151,226 @@ const DocumentsPage = () => {
       .finally(() => setDetailLoading(false));
   }, [selectedDocumentId]);
 
-  const treeData = useMemo(() => {
-    const keywordText = keyword.trim();
-    const grouped = new Map<string, DocumentItem[]>();
+  const keywordText = keyword.trim();
 
-    for (const document of documents ?? []) {
-      const matchesKeyword =
-        keywordText.length === 0
-          ? true
-          : `${document.title} ${document.relative_path}`.includes(keywordText);
-      if (!matchesKeyword) {
+  const groupedDocuments = useMemo(() => {
+    const filtered = (documents ?? []).filter(document => {
+      if (!keywordText) {
+        return true;
+      }
+      return `${document.title} ${document.relative_path}`.includes(keywordText);
+    });
+
+    const groups = new Map<string, DocumentItem[]>();
+
+    for (const item of filtered) {
+      if (item.doc_kind === 'main_summary') {
         continue;
       }
-      const bucket = grouped.get(document.doc_kind) ?? [];
-      bucket.push(document);
-      grouped.set(document.doc_kind, bucket);
+
+      const bucket = groups.get(item.doc_kind) ?? [];
+      bucket.push(item);
+      groups.set(item.doc_kind, bucket);
     }
 
-    return Array.from(grouped.entries()).map(([kind, items]) => ({
-      key: `kind-${kind}`,
-      title: `${kindLabelMap[kind] || kind} (${items.length})`,
-      selectable: false,
-      children: items.map(item => ({
-        key: String(item.id),
-        title: item.title,
-      })),
-    }));
-  }, [documents, keyword]);
+    return groupOrder
+      .map(kind => ({
+        kind,
+        items: groups.get(kind) ?? [],
+      }))
+      .filter(group => group.items.length > 0);
+  }, [documents, keywordText]);
+
+  const openDocument = (documentId: number) => {
+    setSelectedDocumentId(documentId);
+    setSearchParams({ documentId: String(documentId) });
+  };
+
+  const openPreview = (target: FilePreviewTarget) => {
+    setPreviewTarget(target);
+  };
+
+  const priorityDescription =
+    mainDocument?.title === detail?.title
+      ? '当前正在查看主文档，适合优先提供给医生快速了解整体情况。'
+      : '医生沟通时建议先看这份主文档，再补充住院整理和原始资料。';
 
   return (
-    <Space direction="vertical" size={20} style={{ width: '100%' }}>
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <div>
         <Typography.Title level={3}>文档资料</Typography.Title>
         <Typography.Paragraph>
-          这里可以直接阅读整理好的文档内容，并继续追到对应的图片或 PDF。
+          主文档放在最前面，便于先看整体情况；其他住院整理和报告目录放在后面，按需要继续展开查看。
         </Typography.Paragraph>
       </div>
+
       <DocumentLayout>
-        <Card variant="borderless" loading={loading} style={{ minHeight: 640 }}>
-          {error ? <Empty description={error} /> : null}
-          {!error ? (
-            <Space direction="vertical" size={16} style={{ width: '100%' }}>
-              <Input
-                value={keyword}
-                onChange={event => setKeyword(event.target.value)}
-                placeholder="筛选文档标题或路径"
-              />
-              <Tree
-                treeData={treeData}
-                selectedKeys={selectedDocumentId ? [String(selectedDocumentId)] : []}
-                onSelect={keys => {
-                  const nextKey = keys[0];
-                  if (nextKey) {
-                    const nextId = Number(nextKey);
-                    setSelectedDocumentId(nextId);
-                    setSearchParams({ documentId: String(nextId) });
-                  }
-                }}
-                defaultExpandAll
-              />
-            </Space>
-          ) : null}
-        </Card>
-        <Card variant="borderless" loading={detailLoading} style={{ minHeight: 640 }}>
+        <SidebarStack>
+          <Card variant="borderless" loading={loading} styles={{ body: { padding: 20 } }}>
+            {error ? <Empty description={error} /> : null}
+            {!error ? (
+              <SidebarStack>
+                <Input
+                  value={keyword}
+                  onChange={event => setKeyword(event.target.value)}
+                  placeholder="筛选文档标题或路径"
+                />
+
+                {mainDocument ? (
+                  <PriorityCard $active={selectedDocumentId === mainDocument.id}>
+                    <Space direction="vertical" size={10} style={{ width: '100%' }}>
+                      <PreviewMeta>
+                        <Tag color="success" icon={<PushpinOutlined />}>
+                          优先查看
+                        </Tag>
+                        <Tag>主文档</Tag>
+                      </PreviewMeta>
+
+                      <div>
+                        <Typography.Title level={5} style={{ margin: 0 }}>
+                          {mainDocument.title}
+                        </Typography.Title>
+                        <Typography.Paragraph style={{ margin: '8px 0 0' }}>
+                          {priorityDescription}
+                        </Typography.Paragraph>
+                      </div>
+
+                      <Button type="primary" onClick={() => openDocument(mainDocument.id)}>
+                        查看主文档
+                      </Button>
+                    </Space>
+                  </PriorityCard>
+                ) : null}
+
+                <div>
+                  <Typography.Text strong>其他资料</Typography.Text>
+                  <Typography.Paragraph type="secondary" style={{ marginTop: 6, marginBottom: 0 }}>
+                    住院整理和报告目录放在这里，按分类展开即可。
+                  </Typography.Paragraph>
+                </div>
+
+                {groupedDocuments.length > 0 ? (
+                  <Collapse
+                    ghost
+                    defaultActiveKey={groupedDocuments.map(group => group.kind)}
+                    items={groupedDocuments.map(group => ({
+                      key: group.kind,
+                      label: (
+                        <Space size={10}>
+                          {resolveGroupIcon(group.kind)}
+                          <span>{kindLabelMap[group.kind] || group.kind}</span>
+                          <Tag>{group.items.length}</Tag>
+                        </Space>
+                      ),
+                      children: (
+                        <DocGroupList>
+                          {group.items.map(item => (
+                            <DocButton
+                              key={item.id}
+                              type="button"
+                              $active={selectedDocumentId === item.id}
+                              onClick={() => openDocument(item.id)}
+                            >
+                              <Typography.Text strong>{item.title}</Typography.Text>
+                              <Typography.Paragraph type="secondary" style={{ margin: '6px 0 0' }}>
+                                {item.relative_path}
+                              </Typography.Paragraph>
+                            </DocButton>
+                          ))}
+                        </DocGroupList>
+                      ),
+                    }))}
+                  />
+                ) : (
+                  <Empty description="当前筛选条件下没有其他文档" />
+                )}
+              </SidebarStack>
+            ) : null}
+          </Card>
+        </SidebarStack>
+
+        <Card
+          variant="borderless"
+          loading={detailLoading}
+          style={{ minHeight: 640 }}
+          styles={{ body: { padding: 24 } }}
+        >
           {detail ? (
             <Space direction="vertical" size={20} style={{ width: '100%' }}>
-              <Space wrap>
-                <Typography.Title level={4} style={{ margin: 0 }}>
-                  {detail.title}
-                </Typography.Title>
-                {detail.raw_url ? (
-                  <Button type="link" href={detail.raw_url} target="_blank">
-                    打开原始文档
+              <Space wrap style={{ justifyContent: 'space-between', width: '100%' }}>
+                <div>
+                  <Typography.Title level={4} style={{ margin: 0 }}>
+                    {detail.title}
+                  </Typography.Title>
+                  <PreviewMeta style={{ marginTop: 10 }}>
+                    <Tag color={detail.doc_kind === 'main_summary' ? 'success' : 'processing'}>
+                      {kindLabelMap[detail.doc_kind] || detail.doc_kind}
+                    </Tag>
+                    <Typography.Text type="secondary">{detail.relative_path}</Typography.Text>
+                  </PreviewMeta>
+                </div>
+
+                <Space wrap>
+                  <Button
+                    onClick={() =>
+                      openPreview({
+                        title: detail.title,
+                        relativePath: detail.relative_path,
+                        rawUrl: detail.raw_url,
+                        fileType: 'markdown',
+                        markdownContent: detail.content_text,
+                      })
+                    }
+                  >
+                    侧边预览
                   </Button>
-                ) : null}
+                </Space>
               </Space>
+
               <XMarkdown content={rewriteMarkdownLinks(detail.content_text, detail.relative_path)} />
+
               <div>
-                <Typography.Title level={5}>关联原始文件</Typography.Title>
+                <Typography.Title level={5}>关联原始资料</Typography.Title>
                 <List
                   size="small"
                   dataSource={detail.related_files}
                   locale={{ emptyText: '当前文档没有关联文件' }}
-                  renderItem={item => (
-                    <List.Item>
-                      <Space wrap>
-                        <Typography.Text>{item.relative_path}</Typography.Text>
-                        {item.raw_url ? (
-                          <Button type="link" href={item.raw_url} target="_blank">
-                            打开
-                          </Button>
-                        ) : null}
-                      </Space>
-                    </List.Item>
-                  )}
+                  renderItem={item => {
+                    const previewType = inferPreviewFileType(item.relative_path);
+
+                    return (
+                      <List.Item>
+                        <Space
+                          wrap
+                          size={10}
+                          style={{ width: '100%', justifyContent: 'space-between' }}
+                        >
+                          <Space wrap size={10}>
+                            {previewType === 'image' ? <PictureOutlined /> : <FileTextOutlined />}
+                            <Typography.Text>{item.relative_path}</Typography.Text>
+                          </Space>
+
+                          <Space wrap size={4}>
+                            {item.raw_url ? (
+                              <Button
+                                type="link"
+                                onClick={() =>
+                                  openPreview({
+                                    title: resolvePreviewTitle(item.relative_path),
+                                    relativePath: item.relative_path,
+                                    rawUrl: item.raw_url,
+                                    fileType: previewType,
+                                  })
+                                }
+                              >
+                                预览
+                              </Button>
+                            ) : null}
+                          </Space>
+                        </Space>
+                      </List.Item>
+                    );
+                  }}
                 />
               </div>
             </Space>
@@ -165,6 +379,12 @@ const DocumentsPage = () => {
           )}
         </Card>
       </DocumentLayout>
+
+      <FilePreviewDrawer
+        open={previewTarget !== null}
+        target={previewTarget}
+        onClose={() => setPreviewTarget(null)}
+      />
     </Space>
   );
 };

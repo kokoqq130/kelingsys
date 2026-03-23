@@ -36,6 +36,14 @@ class QueryServiceTests(unittest.TestCase):
       self.assertGreaterEqual(len(medications["current"]), 1)
       self.assertGreaterEqual(len(medications["adjustments"]), 1)
 
+  def test_betaine_category_is_metabolic_treatment(self) -> None:
+    with get_connection() as connection:
+      service = QueryService(connection)
+      medications = service.get_medications()
+      betaine = next((item for item in medications["current"] if item["name"] == "甜菜碱"), None)
+      self.assertIsNotNone(betaine)
+      self.assertEqual(betaine["category"], "代谢病治疗")
+
   def test_search_finds_diazepam_keyword(self) -> None:
     with get_connection() as connection:
       service = QueryService(connection)

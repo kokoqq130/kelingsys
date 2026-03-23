@@ -1,14 +1,16 @@
 import { Button, Card, Empty, Input, List, Space, Typography } from 'antd';
 import { useDeferredValue, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
 
 import { medicalApi } from '@/api/medical';
+import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
 import type { SearchItem } from '@/types/api';
+import { buildPreviewHighlightTerms, inferPreviewFileType, resolvePreviewTitle } from '@/utils/filePreview';
 
 const SearchPage = () => {
   const [keyword, setKeyword] = useState('');
   const [results, setResults] = useState<SearchItem[]>([]);
   const [loading, setLoading] = useState(false);
+  const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
   const deferredKeyword = useDeferredValue(keyword);
 
   useEffect(() => {
@@ -23,6 +25,33 @@ const SearchPage = () => {
       .then(nextResults => setResults(nextResults))
       .finally(() => setLoading(false));
   }, [deferredKeyword]);
+
+  const openPreview = async (item: SearchItem) => {
+    try {
+      let relativePath = item.relative_path;
+      let rawUrl = item.raw_url;
+      let markdownContent: string | undefined;
+
+      if (!rawUrl && item.document_id) {
+        const detail = await medicalApi.getDocumentDetail(item.document_id);
+        relativePath = detail.relative_path;
+        rawUrl = detail.raw_url ?? undefined;
+        markdownContent = detail.content_text;
+      }
+
+      setPreviewTarget({
+        title: resolvePreviewTitle(relativePath, item.title),
+        relativePath: relativePath,
+        rawUrl,
+        fileType: inferPreviewFileType(relativePath, rawUrl ? undefined : 'markdown'),
+        markdownContent,
+        highlightLabel: deferredKeyword.trim() || item.title,
+        highlightTerms: buildPreviewHighlightTerms(deferredKeyword, item.title, item.snippet),
+      });
+    } catch {
+      return;
+    }
+  };
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -50,12 +79,9 @@ const SearchPage = () => {
               renderItem={item => (
                 <List.Item
                   actions={[
-                    <Link key="doc" to={`/documents?documentId=${item.document_id}`}>
-                      查看文档
-                    </Link>,
-                    item.raw_url ? (
-                      <Button key="open" type="link" href={item.raw_url} target="_blank">
-                        打开原始资料
+                    item.document_id || item.raw_url ? (
+                      <Button key="preview" type="link" onClick={() => void openPreview(item)}>
+                        预览文档
                       </Button>
                     ) : null,
                   ]}
@@ -75,6 +101,11 @@ const SearchPage = () => {
           )}
         </Space>
       </Card>
+      <FilePreviewDrawer
+        open={previewTarget !== null}
+        target={previewTarget}
+        onClose={() => setPreviewTarget(null)}
+      />
     </Space>
   );
 };

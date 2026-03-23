@@ -3,8 +3,10 @@ import { Button, Card, Empty, Segmented, Space, Table, Tag, Typography, theme } 
 import { useEffect, useMemo, useState } from 'react';
 
 import { medicalApi } from '@/api/medical';
+import FilePreviewDrawer, { type FilePreviewTarget } from '@/components/FilePreviewDrawer';
 import { useApiResource } from '@/hooks/useApiResource';
 import type { LabItem } from '@/types/api';
+import { inferPreviewFileType, resolvePreviewTitle } from '@/utils/filePreview';
 
 function statusColor(status: LabItem['status']): string {
   if (status === 'high') {
@@ -36,6 +38,7 @@ const LabsPage = () => {
   const { token } = theme.useToken();
   const { data, error, loading } = useApiResource(medicalApi.getLabs, []);
   const [selectedTest, setSelectedTest] = useState<string>('');
+  const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
 
   const numericGroups = useMemo(() => {
     const groups = new Map<string, LabItem[]>();
@@ -70,6 +73,21 @@ const LabsPage = () => {
       value: item.numeric_value ?? 0,
     }));
   }, [numericGroups, selectedTest]);
+
+  const openPreview = (item: LabItem) => {
+    if (!item.raw_url) {
+      return;
+    }
+
+    setPreviewTarget({
+      title: resolvePreviewTitle(item.relative_path, item.test_name),
+      relativePath: item.relative_path,
+      rawUrl: item.raw_url,
+      fileType: inferPreviewFileType(item.relative_path),
+      highlightLabel: item.test_name,
+      highlightTerms: [item.test_name],
+    });
+  };
 
   return (
     <Space direction="vertical" size={20} style={{ width: '100%' }}>
@@ -143,13 +161,12 @@ const LabsPage = () => {
                 render: value => <Tag color={statusColor(value)}>{statusLabel(value)}</Tag>,
               },
               {
-                title: '原始文件',
-                dataIndex: 'raw_url',
+                title: '预览',
                 width: 120,
-                render: value =>
-                  value ? (
-                    <Button type="link" href={value} target="_blank">
-                      打开
+                render: (_, record) =>
+                  record.raw_url ? (
+                    <Button type="link" onClick={() => openPreview(record)}>
+                      预览
                     </Button>
                   ) : (
                     '-'
@@ -159,6 +176,11 @@ const LabsPage = () => {
           />
         ) : null}
       </Card>
+      <FilePreviewDrawer
+        open={previewTarget !== null}
+        target={previewTarget}
+        onClose={() => setPreviewTarget(null)}
+      />
     </Space>
   );
 };
