@@ -53,6 +53,7 @@
 ## OCR 与报告文件
 
 - 先 OCR，再给 `微信图片_*.jpg`、`微信图片_*.png` 这类泛文件名改名。
+- 资料整理模式下，OCR 统一通过本地 `medical-report-organizer` 里的 `Invoke-MedicalOcr.ps1` 调用 `app/backend/.venv` 内的 PaddleOCR，不再默认回退到 Windows OCR。
 - 只有在日期和报告类型基本确认后，才重命名报告文件。
 - 报告文件名优先采用 `YYYY-MM-DD_报告名称.ext` 这种格式。
 - 如果日期或数值不确定，不要假装是精确值。
@@ -75,7 +76,7 @@
 - 查询管理系统是“查询优先”，不是“表单录入优先”。
 - 后续资料录入仍然以“用户与 AI 对话，AI 修改文档”的方式为主，系统代码不要强行改造成复杂手工录入后台。
 - 系统的数据源优先是项目内现有 markdown、图片、PDF 和整理稿，代码要围绕这些真实文件做索引和查询。
-- 查询系统启动约定：前端默认可直接在 `app/frontend` 下运行 `pnpm run dev`；后端统一通过 `scripts/Start-Backend.ps1` 启动，确保使用 `app/backend/.venv`；同时启动前后端时优先使用 `scripts/Start-QueryApp.ps1`。
+- 查询系统启动约定：前端默认可直接在 `app/frontend` 下运行 `pnpm run dev`；后端统一通过 `scripts/Start-Backend.ps1` 启动，确保使用 `app/backend/.venv`，且该虚拟环境统一固定为 Python 3.12；同时启动前后端时优先使用 `scripts/Start-QueryApp.ps1`。
 - 查询系统部署约定：开发阶段继续优先保留后端 `/api/*` 接口模式；对外分享阶段优先采用“静态分享模式”，在构建时自动导出 JSON 数据和原始资料静态文件，避免为了临时分享额外依赖常驻云端 Python 服务。
 - 前端 UI 优先使用 **Ant Design**。
 - 前端 markdown 展示优先使用 **Ant Design X** 的 `@ant-design/x-markdown`。

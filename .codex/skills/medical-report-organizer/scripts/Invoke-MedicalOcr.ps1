@@ -15,26 +15,37 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$windowsOcr = Join-Path $scriptDir 'Invoke-WindowsOcr.ps1'
+$projectRoot = [System.IO.Path]::GetFullPath((Join-Path $scriptDir '..\..\..\..'))
+$setupScript = Join-Path $projectRoot 'scripts\Setup-Backend.ps1'
+$pythonPath = Join-Path $projectRoot 'app\backend\.venv\Scripts\python.exe'
+$ocrScript = Join-Path $scriptDir 'invoke_paddle_ocr.py'
 
-if (-not (Test-Path $windowsOcr)) {
-    throw "Missing bundled OCR script: $windowsOcr"
+if (-not (Test-Path $setupScript)) {
+    throw "Backend setup script not found: $setupScript"
 }
 
-# Future-proof entrypoint: when a Python OCR implementation is added and
-# available on PATH, this wrapper can prefer it. For now, always use the
-# tested Windows OCR implementation.
-$params = @{
-    Path = $Path
-    Format = $Format
+if (-not (Test-Path $ocrScript)) {
+    throw "Missing bundled PaddleOCR script: $ocrScript"
 }
+
+& $setupScript
+
+if (-not (Test-Path $pythonPath)) {
+    throw "Backend Python not found after setup: $pythonPath"
+}
+
+$args = @(
+    $ocrScript,
+    '--path', $Path,
+    '--format', $Format
+)
 
 if ($Recurse) {
-    $params.Recurse = $true
+    $args += '--recurse'
 }
 
 if ($OutputPath) {
-    $params.OutputPath = $OutputPath
+    $args += @('--output-path', $OutputPath)
 }
 
-& $windowsOcr @params
+& $pythonPath @args

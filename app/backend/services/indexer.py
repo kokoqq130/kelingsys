@@ -13,7 +13,7 @@ from config import DATA_ROOT, INDEX_DB_PATH, PROJECT_ROOT
 
 
 DATE_RE = re.compile(r"(?P<year>\d{4})年(?P<month>\d{1,2})月(?:(?P<day>\d{1,2})日)?")
-NUMBER_RE = re.compile(r"(?P<number>-?\d+(?:\.\d+)?)\s*(?P<unit>[A-Za-zµ/%·/\u4e00-\u9fff]+)?")
+NUMBER_RE = re.compile(r"(?P<number>-?\d+(?:\.\d+)?)\s*(?P<unit>[A-Za-zµμ/%·/\u4e00-\u9fff]+)?")
 LINK_RE = re.compile(r"!\[[^\]]*]\((?P<path>[^)]+)\)|\[[^\]]*]\((?P<path_text>[^)]+)\)")
 METRIC_CHUNK_SPLIT_RE = re.compile(r"[，,；。]")
 GENERIC_METRIC_NAMES = {"结果", "数值", "值"}
@@ -766,7 +766,7 @@ def _extract_lab_metrics(panel_name: str, result_text: str) -> list[dict[str, st
         continue
 
       match = re.search(
-        r"(?P<name>[A-Za-z][A-Za-z0-9/+%-]*|[\u4e00-\u9fffA-Za-z0-9/+%-]+?)\s*(?:约|为|:|：)\s*(?P<number>-?\d+(?:\.\d+)?)\s*(?P<unit>[A-Za-zµ/%·/\u4e00-\u9fff]+)?",
+        r"(?P<name>[A-Za-zΑ-Ωα-ω][A-Za-zΑ-Ωα-ω0-9/+%-]*|[\u4e00-\u9fffA-Za-zΑ-Ωα-ω0-9/+%-]+?)\s*(?:约|为|:|：)?\s*(?P<number>-?\d+(?:\.\d+)?)\s*(?P<unit>[A-Za-zµμ/%·/\u4e00-\u9fff]+)?",
         cleaned,
       )
       if not match:

@@ -25,7 +25,7 @@ pnpm run dev
 
 2. 后端：
 
-后端统一通过项目内虚拟环境 `app/backend/.venv` 启动。首次启动时，脚本会自动创建虚拟环境并安装 `requirements.txt`：
+后端统一通过项目内虚拟环境 `app/backend/.venv` 启动。该虚拟环境统一固定为 Python 3.12；首次启动时，脚本会自动创建虚拟环境并安装 `requirements.txt`（包含 PaddleOCR 依赖）：
 
 ```powershell
 .\scripts\Start-Backend.ps1
@@ -71,7 +71,7 @@ pnpm run build:share
 .\scripts\Build-ShareSite.ps1
 ```
 
-分享构建阶段调用后端导出脚本时，也会明确使用 `app/backend/.venv` 里的 Python；如果虚拟环境不存在，请先运行：
+分享构建阶段调用后端导出脚本时，也会明确使用 `app/backend/.venv` 里的 Python 3.12；如果虚拟环境不存在，或之前是用别的 Python 版本创建的，请先运行：
 
 ```powershell
 .\scripts\Setup-Backend.ps1

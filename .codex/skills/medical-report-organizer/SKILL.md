@@ -37,7 +37,7 @@ powershell -ExecutionPolicy Bypass -File "<skill-dir>\scripts\Invoke-MedicalOcr.
 powershell -ExecutionPolicy Bypass -File "<skill-dir>\scripts\Invoke-MedicalOcr.ps1" -Path ".\某张报告.png"
 ```
 
-当前入口脚本默认回退到内置的 Windows OCR 实现。脚本输出应视为“原始提取结果”，不要把模糊图片或复杂表格里的 OCR 结果当成绝对准确值。
+当前入口脚本会先调用项目里的 `scripts/Setup-Backend.ps1`，确保 `app/backend/.venv` 使用 Python 3.12 并安装 PaddleOCR。脚本输出应视为“原始提取结果”，不要把模糊图片或复杂表格里的 OCR 结果当成绝对准确值。
 
 如果报告文件已经按规则命名，可以用 Python 脚本生成或刷新索引表：
 
