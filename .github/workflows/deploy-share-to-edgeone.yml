@@ -57,18 +57,36 @@ jobs:
           name: edgeone-share-dist
           path: app/frontend/dist
 
-      - name: Install EdgeOne CLI
-        if: ${{ secrets.EDGEONE_API_TOKEN != '' && vars.EDGEONE_PROJECT_NAME != '' }}
-        run: npm install -g edgeone
-
       - name: Deploy to EdgeOne Pages
         if: ${{ secrets.EDGEONE_API_TOKEN != '' && vars.EDGEONE_PROJECT_NAME != '' }}
+        id: deploy
         working-directory: app/frontend
         env:
           EDGEONE_API_TOKEN: ${{ secrets.EDGEONE_API_TOKEN }}
           EDGEONE_PROJECT_NAME: ${{ vars.EDGEONE_PROJECT_NAME }}
         run: |
-          edgeone pages deploy ./dist \
-            -n "$EDGEONE_PROJECT_NAME" \
-            -e "${{ inputs.deploy_env }}" \
-            -t "$EDGEONE_API_TOKEN"
+          set +e
+          DEPLOY_OUTPUT=$(npx --yes edgeone pages deploy ./dist -n "$EDGEONE_PROJECT_NAME" -e "${{ inputs.deploy_env }}" -t "$EDGEONE_API_TOKEN" 2>&1)
+          DEPLOY_EXIT_CODE=$?
+          set -e
+          echo "$DEPLOY_OUTPUT"
+
+          if [ "$DEPLOY_EXIT_CODE" -ne 0 ]; then
+            exit "$DEPLOY_EXIT_CODE"
+          fi
+
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep "EDGEONE_DEPLOY_URL=" | cut -d'=' -f2- || true)
+          PROJECT_ID=$(echo "$DEPLOY_OUTPUT" | grep "EDGEONE_PROJECT_ID=" | cut -d'=' -f2- || true)
+
+          echo "deploy_url=$DEPLOY_URL" >> "$GITHUB_OUTPUT"
+          echo "project_id=$PROJECT_ID" >> "$GITHUB_OUTPUT"
+
+      - name: Write deployment summary
+        if: ${{ steps.deploy.outputs.deploy_url != '' }}
+        run: |
+          echo "## EdgeOne Pages 部署完成" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 部署环境：${{ inputs.deploy_env }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 项目名称：${{ vars.EDGEONE_PROJECT_NAME }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 项目 ID：${{ steps.deploy.outputs.project_id }}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- 预览链接：${{ steps.deploy.outputs.deploy_url }}" >> "$GITHUB_STEP_SUMMARY"
