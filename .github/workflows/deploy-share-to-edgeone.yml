@@ -58,6 +58,8 @@ jobs:
 
       - name: Build static share bundle
         working-directory: app/frontend
+        env:
+          BACKEND_PYTHON: python
         run: pnpm run build:share
 
       - name: Upload build artifact

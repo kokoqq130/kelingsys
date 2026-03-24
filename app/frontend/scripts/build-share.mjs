@@ -1,7 +1,7 @@
 import { copyFileSync, existsSync, mkdirSync, rmSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const frontendRoot = resolve(__dirname, '..');
@@ -10,7 +10,29 @@ const backendRoot = resolve(projectRoot, 'app', 'backend');
 const sharePublicDir = resolve(frontendRoot, '.share-public');
 const distDir = resolve(frontendRoot, 'dist');
 
+function canExecutePython(command) {
+  if (!command) {
+    return false;
+  }
+
+  const result = spawnSync(command, ['-c', 'import sys; print(sys.version)'], {
+    stdio: 'ignore',
+    shell: false,
+  });
+
+  return result.status === 0;
+}
+
 function resolvePythonCommand() {
+  const explicitPython = process.env.BACKEND_PYTHON?.trim();
+  if (explicitPython) {
+    if (canExecutePython(explicitPython)) {
+      return explicitPython;
+    }
+
+    throw new Error(`Configured BACKEND_PYTHON is not executable: ${explicitPython}`);
+  }
+
   const windowsVenv = resolve(backendRoot, '.venv', 'Scripts', 'python.exe');
   if (existsSync(windowsVenv)) {
     return windowsVenv;
@@ -21,8 +43,24 @@ function resolvePythonCommand() {
     return posixVenv;
   }
 
+  const ciCandidates = [];
+  if (process.env.pythonLocation) {
+    ciCandidates.push(
+      process.platform === 'win32'
+        ? resolve(process.env.pythonLocation, 'python.exe')
+        : resolve(process.env.pythonLocation, 'bin', 'python'),
+    );
+  }
+  ciCandidates.push('python3', 'python');
+
+  for (const candidate of ciCandidates) {
+    if (canExecutePython(candidate)) {
+      return candidate;
+    }
+  }
+
   throw new Error(
-    'Backend virtual environment was not found. Run scripts/Setup-Backend.ps1 first and use app/backend/.venv Python.',
+    'Backend Python was not found. Locally run scripts/Setup-Backend.ps1 to prepare app/backend/.venv, or set BACKEND_PYTHON in CI.',
   );
 }
 

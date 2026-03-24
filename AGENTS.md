@@ -78,6 +78,7 @@
 - 系统的数据源优先是项目内现有 markdown、图片、PDF 和整理稿，代码要围绕这些真实文件做索引和查询。
 - 查询系统启动约定：前端默认可直接在 `app/frontend` 下运行 `pnpm run dev`；后端统一通过 `scripts/Start-Backend.ps1` 启动，确保使用 `app/backend/.venv`，且该虚拟环境统一固定为 Python 3.12；同时启动前后端时优先使用 `scripts/Start-QueryApp.ps1`。
 - 查询系统部署约定：开发阶段继续优先保留后端 `/api/*` 接口模式；对外分享阶段优先采用“静态分享模式”，在构建时自动导出 JSON 数据和原始资料静态文件，避免为了临时分享额外依赖常驻云端 Python 服务。
+- 静态分享构建约定：本地 `build:share` 优先使用 `app/backend/.venv`；在 CI 中如果没有项目内虚拟环境，需要显式传入 `BACKEND_PYTHON` 指向已准备好的 Python 解释器。
 - 前端 UI 优先使用 **Ant Design**。
 - 前端 markdown 展示优先使用 **Ant Design X** 的 `@ant-design/x-markdown`。
 - 涉及 markdown 页面渲染时，默认直接采用 `@ant-design/x-markdown`，不把通用 markdown 解析库作为首选默认方案，除非后续明确出现 Ant Design X 无法满足的能力缺口。

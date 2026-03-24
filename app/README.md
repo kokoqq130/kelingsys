@@ -71,11 +71,13 @@ pnpm run build:share
 .\scripts\Build-ShareSite.ps1
 ```
 
-分享构建阶段调用后端导出脚本时，也会明确使用 `app/backend/.venv` 里的 Python 3.12；如果虚拟环境不存在，或之前是用别的 Python 版本创建的，请先运行：
+分享构建阶段调用后端导出脚本时，本地默认优先使用 `app/backend/.venv` 里的 Python 3.12；如果虚拟环境不存在，或之前是用别的 Python 版本创建的，请先运行：
 
 ```powershell
 .\scripts\Setup-Backend.ps1
 ```
+
+在 GitHub Actions 这类 CI 环境里，如果没有项目内虚拟环境，可以通过环境变量 `BACKEND_PYTHON` 显式指定 `actions/setup-python` 提供的解释器。
 
 构建完成后，分享站点产物位于 `app/frontend/dist/`。
 
