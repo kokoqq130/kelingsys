@@ -53,7 +53,7 @@
 ## OCR 与报告文件
 
 - 先 OCR，再给 `微信图片_*.jpg`、`微信图片_*.png` 这类泛文件名改名。
-- 资料整理模式下，OCR 统一通过本地 `medical-report-organizer` 里的 `Invoke-MedicalOcr.ps1` 调用 `app/backend/.venv` 内的 PaddleOCR，不再默认回退到 Windows OCR。
+- 资料整理模式下，OCR 统一通过本地 `medical-report-organizer` 里的 `Invoke-MedicalOcr.ps1` 调用 `app/backend/.venv` 内的 PaddleOCR。
 - 只有在日期和报告类型基本确认后，才重命名报告文件。
 - 报告文件名优先采用 `YYYY-MM-DD_报告名称.ext` 这种格式。
 - 如果日期或数值不确定，不要假装是精确值。
