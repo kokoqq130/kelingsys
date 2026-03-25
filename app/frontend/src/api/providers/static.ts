@@ -1,5 +1,7 @@
 import { jsonGet } from '@/api/client';
 import type {
+  AdmissionPeriodDetail,
+  AdmissionPeriodSummary,
   DocumentDetail,
   DocumentItem,
   EventItem,
@@ -92,6 +94,9 @@ export const staticMedicalApi = {
   getTimeline: () => readStaticJson<EventItem[]>('timeline.json'),
   getLabs: () => readStaticJson<LabItem[]>('labs.json'),
   getMedications: () => readStaticJson<MedicationsResponse>('medications.json'),
+  getAdmissionPeriods: () => readStaticJson<AdmissionPeriodSummary[]>('admissions.json'),
+  getAdmissionPeriodDetail: (periodId: number) =>
+    readStaticJson<AdmissionPeriodDetail>(`admission-details/${periodId}.json`),
   getDocuments: () => readStaticJson<DocumentItem[]>('documents.json'),
   getDocumentDetail: (documentId: number) =>
     readStaticJson<DocumentDetail>(`document-details/${documentId}.json`),

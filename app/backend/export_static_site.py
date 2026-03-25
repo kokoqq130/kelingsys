@@ -33,6 +33,7 @@ def export_static_site(output_dir: Path) -> None:
     timeline = service.get_timeline()
     labs = service.get_lab_groups()
     medications = service.get_medications()
+    admissions = service.get_admission_periods()
     documents = service.get_documents()
     files = service.list_files()
     search_index = service.get_search_index()
@@ -51,6 +52,7 @@ def export_static_site(output_dir: Path) -> None:
     write_json(static_data_dir / "timeline.json", timeline)
     write_json(static_data_dir / "labs.json", labs)
     write_json(static_data_dir / "medications.json", medications)
+    write_json(static_data_dir / "admissions.json", admissions)
     write_json(static_data_dir / "documents.json", documents)
     write_json(static_data_dir / "files.json", files)
     write_json(static_data_dir / "search-index.json", search_index)
@@ -60,6 +62,12 @@ def export_static_site(output_dir: Path) -> None:
       detail = service.get_document_detail(document["id"])
       if detail:
         write_json(details_dir / f"{document['id']}.json", detail)
+
+    admission_details_dir = static_data_dir / "admission-details"
+    for admission in admissions:
+      detail = service.get_admission_period_detail(admission["id"])
+      if detail:
+        write_json(admission_details_dir / f"{admission['id']}.json", detail)
 
   shutil.copytree(DATA_ROOT, output_dir / "raw", dirs_exist_ok=True)
 

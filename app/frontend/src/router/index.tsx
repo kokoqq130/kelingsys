@@ -27,6 +27,10 @@ export const router = createRouter([
         lazy: async () => ({ Component: (await import('@/pages/MedicationsPage')).default }),
       },
       {
+        path: 'admissions',
+        lazy: async () => ({ Component: (await import('@/pages/AdmissionsPage')).default }),
+      },
+      {
         path: 'labs',
         lazy: async () => ({ Component: (await import('@/pages/LabsPage')).default }),
       },

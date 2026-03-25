@@ -11,6 +11,7 @@ import {
 import { Column, Pie } from '@ant-design/plots';
 import { Alert, App, Button, Card, Empty, Grid, Space, Statistic, Tag, Typography, theme } from 'antd';
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import styled from 'styled-components';
 
 import { medicalApi, medicalApiCapabilities } from '@/api/medical';
@@ -438,6 +439,7 @@ const OverviewPage = () => {
   const { token } = theme.useToken();
   const screens = useBreakpoint();
   const isMobile = !screens.md;
+  const navigate = useNavigate();
   const { data, error, loading, reload } = useApiResource(medicalApi.getOverview, []);
   const { data: documents } = useApiResource(medicalApi.getDocuments, []);
   const [previewTarget, setPreviewTarget] = useState<FilePreviewTarget | null>(null);
@@ -732,6 +734,15 @@ const OverviewPage = () => {
                 <Typography.Text type="secondary" style={{ marginTop: 8 }}>
                   {item.detail}
                 </Typography.Text>
+              ) : null}
+              {item.key === 'admission' && data?.latest_admission?.id ? (
+                <Button
+                  type="link"
+                  style={{ paddingInline: 0, marginTop: 8 }}
+                  onClick={() => navigate(`/admissions?periodId=${data.latest_admission?.id}`)}
+                >
+                  查看本次住院流程
+                </Button>
               ) : null}
             </SnapshotCard>
           ))}

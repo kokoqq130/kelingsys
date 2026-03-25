@@ -39,6 +39,7 @@ class QueryService:
       SELECT
         id,
         title,
+        folder_path,
         admission_date,
         admission_date_text,
         discharge_date,
@@ -46,6 +47,11 @@ class QueryService:
         period_text,
         status,
         summary,
+        admission_reason,
+        main_event,
+        treatment,
+        symptoms,
+        medication_change,
         discharge_summary,
         detail_text,
         source_document_id
@@ -215,6 +221,142 @@ class QueryService:
       ],
     }
 
+  def get_admission_periods(self) -> list[dict]:
+    rows = self.connection.execute(
+      """
+      SELECT
+        id,
+        title,
+        folder_path,
+        admission_date,
+        admission_date_text,
+        discharge_date,
+        discharge_date_text,
+        period_text,
+        status,
+        summary,
+        admission_reason,
+        main_event,
+        treatment,
+        symptoms,
+        medication_change,
+        discharge_summary,
+        detail_text,
+        source_document_id
+      FROM admission_periods
+      ORDER BY admission_date DESC, id DESC
+      """
+    ).fetchall()
+    return [dict(row) for row in rows]
+
+  def get_admission_period_detail(self, period_id: int) -> dict | None:
+    period_row = self.connection.execute(
+      """
+      SELECT
+        id,
+        title,
+        folder_path,
+        admission_date,
+        admission_date_text,
+        discharge_date,
+        discharge_date_text,
+        period_text,
+        status,
+        summary,
+        admission_reason,
+        main_event,
+        treatment,
+        symptoms,
+        medication_change,
+        discharge_summary,
+        detail_text,
+        source_document_id
+      FROM admission_periods
+      WHERE id = ?
+      """,
+      (period_id,),
+    ).fetchone()
+
+    if not period_row:
+      return None
+
+    folder_like = f"{period_row['folder_path']}/%"
+    document_rows = self.connection.execute(
+      """
+      SELECT d.id, d.doc_kind, d.title, f.relative_path
+      FROM documents d
+      JOIN files f ON f.id = d.file_id
+      WHERE f.relative_path LIKE ?
+      ORDER BY
+        CASE d.doc_kind
+          WHEN 'admission_note' THEN 0
+          WHEN 'discharge_summary' THEN 1
+          WHEN 'report_index' THEN 2
+          ELSE 3
+        END,
+        f.relative_path
+      """,
+      (folder_like,),
+    ).fetchall()
+    document_ids = [int(row["id"]) for row in document_rows]
+
+    event_rows = self.connection.execute(
+      self._build_admission_period_events_query(document_ids),
+      [period_id, *document_ids],
+    ).fetchall()
+
+    lab_rows = []
+    if document_ids:
+      placeholders = ", ".join("?" for _ in document_ids)
+      lab_rows = self.connection.execute(
+        f"""
+        SELECT
+          lr.id,
+          lr.source_document_id,
+          lr.result_date,
+          lr.result_date_text,
+          lr.test_group,
+          lr.panel_name,
+          lr.test_name,
+          lr.result_text,
+          lr.numeric_value,
+          lr.unit,
+          lr.status,
+          lr.is_approximate,
+          f.relative_path
+        FROM lab_results lr
+        JOIN files f ON f.id = lr.source_file_id
+        WHERE lr.source_document_id IN ({placeholders})
+        ORDER BY lr.result_date DESC, lr.id DESC
+        """,
+        document_ids,
+      ).fetchall()
+
+    raw_file_rows = self.connection.execute(
+      """
+      SELECT id, relative_path, file_name, file_type, updated_at
+      FROM files
+      WHERE relative_path LIKE ?
+        AND file_type != 'markdown'
+      ORDER BY relative_path
+      """,
+      (folder_like,),
+    ).fetchall()
+
+    return {
+      "period": dict(period_row),
+      "events": [dict(row) | {"raw_url": self._raw_url(row["relative_path"])} for row in event_rows],
+      "labs": [dict(row) | {"raw_url": self._raw_url(row["relative_path"])} for row in lab_rows],
+      "documents": [
+        dict(row) | {"raw_url": self._raw_url(row["relative_path"])}
+        for row in document_rows
+      ],
+      "raw_files": [
+        dict(row) | {"raw_url": self._raw_url(row["relative_path"])}
+        for row in raw_file_rows
+      ],
+    }
+
   def get_documents(self) -> list[dict]:
     rows = self.connection.execute(
       """
@@ -331,6 +473,36 @@ class QueryService:
       """
     ).fetchall()
     return [dict(row) | {"raw_url": self._raw_url(row["relative_path"])} for row in rows]
+
+  @staticmethod
+  def _build_admission_period_events_query(document_ids: list[int]) -> str:
+    document_clause = ""
+    if document_ids:
+      placeholders = ", ".join("?" for _ in document_ids)
+      document_clause = f" OR (e.is_hospitalized = 1 AND e.source_document_id IN ({placeholders}))"
+
+    return f"""
+      SELECT
+        e.id,
+        e.admission_period_id,
+        e.source_document_id,
+        e.event_date,
+        e.event_date_text,
+        e.event_time_text,
+        e.event_type,
+        e.title,
+        e.summary,
+        e.detail_text,
+        e.is_hospitalized,
+        ap.period_text AS admission_period_text,
+        ap.status AS admission_status,
+        f.relative_path
+      FROM events e
+      LEFT JOIN admission_periods ap ON ap.id = e.admission_period_id
+      JOIN files f ON f.id = e.source_file_id
+      WHERE e.admission_period_id = ?{document_clause}
+      ORDER BY e.event_date ASC, e.id ASC
+    """
 
   @staticmethod
   def _raw_url(relative_path: str) -> str | None:

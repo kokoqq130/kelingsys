@@ -42,6 +42,23 @@ class QueryServiceTests(unittest.TestCase):
       self.assertGreaterEqual(len(medications["current"]), 1)
       self.assertGreaterEqual(len(medications["adjustments"]), 1)
 
+  def test_admission_periods_can_be_queried_by_period(self) -> None:
+    with get_connection() as connection:
+      service = QueryService(connection)
+      periods = service.get_admission_periods()
+      self.assertGreaterEqual(len(periods), 1)
+      latest = periods[0]
+      self.assertIn("2026年3月22日", latest["period_text"])
+      self.assertIn("呕吐", latest["summary"])
+      self.assertIn("妥泰", latest["medication_change"] or "")
+
+      detail = service.get_admission_period_detail(latest["id"])
+      self.assertIsNotNone(detail)
+      self.assertGreaterEqual(len(detail["events"]), 1)
+      self.assertGreaterEqual(len(detail["labs"]), 1)
+      self.assertGreaterEqual(len(detail["documents"]), 1)
+      self.assertGreaterEqual(len(detail["raw_files"]), 1)
+
   def test_betaine_category_is_metabolic_treatment(self) -> None:
     with get_connection() as connection:
       service = QueryService(connection)

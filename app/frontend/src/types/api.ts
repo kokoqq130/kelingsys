@@ -45,6 +45,7 @@ export interface EventItem {
 
 export interface LabItem {
   id: number;
+  source_document_id?: number;
   result_date: string;
   result_date_text: string;
   test_group: string;
@@ -119,6 +120,7 @@ export interface AbnormalLabItem {
 export interface AdmissionPeriodSummary {
   id: number;
   title: string;
+  folder_path: string;
   admission_date?: string | null;
   admission_date_text?: string | null;
   discharge_date?: string | null;
@@ -126,9 +128,22 @@ export interface AdmissionPeriodSummary {
   period_text: string;
   status?: string | null;
   summary: string;
+  admission_reason?: string | null;
+  main_event?: string | null;
+  treatment?: string | null;
+  symptoms?: string | null;
+  medication_change?: string | null;
   discharge_summary?: string | null;
   detail_text: string;
   source_document_id: number;
+}
+
+export interface AdmissionPeriodDetail {
+  period: AdmissionPeriodSummary;
+  events: EventItem[];
+  labs: LabItem[];
+  documents: DocumentItem[];
+  raw_files: FileItem[];
 }
 
 export interface MedicationAdjustmentItem {
@@ -154,20 +169,7 @@ export interface OverviewResponse {
     event_date_text: string;
     summary: string;
   } | null;
-  latest_admission?: {
-    id: number;
-    title: string;
-    admission_date?: string | null;
-    admission_date_text?: string | null;
-    discharge_date?: string | null;
-    discharge_date_text?: string | null;
-    period_text: string;
-    status?: string | null;
-    summary: string;
-    discharge_summary?: string | null;
-    detail_text: string;
-    source_document_id: number;
-  } | null;
+  latest_admission?: AdmissionPeriodSummary | null;
   stats: {
     file_count: number;
     document_count: number;

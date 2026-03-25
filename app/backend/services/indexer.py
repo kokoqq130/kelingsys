@@ -257,6 +257,11 @@ def _create_schema(connection: sqlite3.Connection) -> None:
       period_text TEXT NOT NULL,
       status TEXT,
       summary TEXT NOT NULL,
+      admission_reason TEXT,
+      main_event TEXT,
+      treatment TEXT,
+      symptoms TEXT,
+      medication_change TEXT,
       discharge_summary TEXT,
       detail_text TEXT NOT NULL,
       source_document_id INTEGER NOT NULL,
@@ -440,8 +445,9 @@ def _upsert_admission_period(
     INSERT INTO admission_periods (
       cycle_key, folder_path, title, admission_date, admission_date_text,
       discharge_date, discharge_date_text, period_text, status, summary,
+      admission_reason, main_event, treatment, symptoms, medication_change,
       discharge_summary, detail_text, source_document_id, source_file_id
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ON CONFLICT(cycle_key) DO UPDATE SET
       folder_path = excluded.folder_path,
       title = excluded.title,
@@ -458,6 +464,11 @@ def _upsert_admission_period(
         WHEN excluded.summary <> '' THEN excluded.summary
         ELSE admission_periods.summary
       END,
+      admission_reason = COALESCE(excluded.admission_reason, admission_periods.admission_reason),
+      main_event = COALESCE(excluded.main_event, admission_periods.main_event),
+      treatment = COALESCE(excluded.treatment, admission_periods.treatment),
+      symptoms = COALESCE(excluded.symptoms, admission_periods.symptoms),
+      medication_change = COALESCE(excluded.medication_change, admission_periods.medication_change),
       discharge_summary = COALESCE(excluded.discharge_summary, admission_periods.discharge_summary),
       detail_text = CASE
         WHEN excluded.detail_text <> '' THEN excluded.detail_text
@@ -477,6 +488,11 @@ def _upsert_admission_period(
       admission_period["period_text"],
       _none_if_empty(admission_period.get("status")),
       admission_period["summary"],
+      _none_if_empty(admission_period.get("admission_reason")),
+      _none_if_empty(admission_period.get("main_event")),
+      _none_if_empty(admission_period.get("treatment")),
+      _none_if_empty(admission_period.get("symptoms")),
+      _none_if_empty(admission_period.get("medication_change")),
       _none_if_empty(admission_period.get("discharge_summary")),
       admission_period["detail_text"],
       source_document_id,
@@ -844,6 +860,11 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
         "period_text": period_text,
         "status": normalized_status or None,
         "summary": period_summary,
+        "admission_reason": admission_reason or None,
+        "main_event": main_event or None,
+        "treatment": treatment or None,
+        "symptoms": symptoms or None,
+        "medication_change": medication_change or None,
         "discharge_summary": discharge_summary or None,
         "detail_text": period_detail_text or period_summary,
       }
@@ -986,11 +1007,14 @@ def _extract_lab_metrics(panel_name: str, result_text: str) -> list[dict[str, st
   plain_text = _plain_text(result_text)
   metrics: list[dict[str, str | bool]] = []
   current_subject = ""
+  skipped_prefixes = ("低于参考范围", "高于参考范围", "仍在参考范围", "在参考范围", "接近上限")
 
   for chunk in METRIC_CHUNK_SPLIT_RE.split(plain_text):
     for segment in chunk.split("、"):
       cleaned = _clean_metric_segment(segment)
       if not cleaned:
+        continue
+      if cleaned.startswith(skipped_prefixes):
         continue
 
       match = re.search(
@@ -1001,6 +1025,8 @@ def _extract_lab_metrics(panel_name: str, result_text: str) -> list[dict[str, st
         continue
 
       metric_name = _normalize_metric_name(match.group("name").strip(), panel_name, current_subject)
+      if re.fullmatch(r"\d+(?:\.\d+)?", metric_name):
+        continue
       current_subject = _derive_metric_subject(metric_name, panel_name, current_subject)
       metric_text = cleaned
       if metric_name != match.group("name").strip():

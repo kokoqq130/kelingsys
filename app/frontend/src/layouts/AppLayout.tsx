@@ -6,6 +6,7 @@ import {
   HomeOutlined,
   MedicineBoxOutlined,
   MenuOutlined,
+  ProfileOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
 import { Button, Drawer, Grid, Layout, Menu, Space, Tag, Typography } from 'antd';
@@ -182,6 +183,7 @@ const menuItems = [
   { key: '/', icon: <HomeOutlined />, label: <Link to="/">总览</Link> },
   { key: '/timeline', icon: <ClockCircleOutlined />, label: <Link to="/timeline">时间线</Link> },
   { key: '/medications', icon: <MedicineBoxOutlined />, label: <Link to="/medications">用药变化</Link> },
+  { key: '/admissions', icon: <ProfileOutlined />, label: <Link to="/admissions">住院周期</Link> },
   { key: '/labs', icon: <FundOutlined />, label: <Link to="/labs">检查结果</Link> },
   { key: '/documents', icon: <FileTextOutlined />, label: <Link to="/documents">文档资料</Link> },
   { key: '/files', icon: <FolderOpenOutlined />, label: <Link to="/files">原始文件</Link> },
@@ -232,12 +234,12 @@ const AppLayout = () => {
           常用入口
         </Typography.Text>
         <Typography.Paragraph style={{ marginBottom: 8, color: 'rgba(6, 95, 70, 0.7)' }}>
-          可以先看总览和时间线，再打开文档资料或原始文件确认细节。
+          可以先看总览和住院周期，再去时间线、文档资料或原始文件确认细节。
         </Typography.Paragraph>
         <Space wrap size={[8, 8]}>
+          <Tag bordered={false}>住院周期</Tag>
           <Tag bordered={false}>文档资料</Tag>
           <Tag bordered={false}>原始文件</Tag>
-          <Tag bordered={false}>搜索</Tag>
         </Space>
       </SidebarFooter>
     </SidebarPanel>

@@ -68,6 +68,21 @@ def medications() -> dict:
         return QueryService(connection).get_medications()
 
 
+@app.get("/api/admissions")
+def admissions() -> list[dict]:
+    with get_connection() as connection:
+        return QueryService(connection).get_admission_periods()
+
+
+@app.get("/api/admissions/{period_id}")
+def admission_detail(period_id: int) -> dict:
+    with get_connection() as connection:
+        period = QueryService(connection).get_admission_period_detail(period_id)
+    if not period:
+        raise HTTPException(status_code=404, detail="Admission period not found")
+    return period
+
+
 @app.get("/api/documents")
 def documents() -> list[dict]:
     with get_connection() as connection:
