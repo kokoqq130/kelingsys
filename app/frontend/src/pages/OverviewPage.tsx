@@ -400,7 +400,8 @@ const { useBreakpoint } = Grid;
 function resolveEventTypeLabel(value?: string): string {
   const map: Record<string, string> = {
     seizure: '发作',
-    admission: '住院',
+    admission: '入院',
+    discharge: '出院',
     medication_adjustment: '调药',
     lab: '检查',
   };
@@ -410,7 +411,8 @@ function resolveEventTypeLabel(value?: string): string {
 function resolveDocumentKindLabel(value?: string): string {
   const map: Record<string, string> = {
     main_summary: '主文档',
-    admission_note: '住院整理',
+    admission_note: '住院周期整理',
+    discharge_summary: '出院小结',
     report_index: '报告目录',
     other: '其他文档',
   };
@@ -540,7 +542,7 @@ const OverviewPage = () => {
       label: '整理文档',
       value: data?.stats.document_count ?? 0,
       icon: <FileTextOutlined />,
-      helper: '主文档与住院整理',
+      helper: '主文档与住院周期资料',
     },
     {
       key: 'labs',
@@ -558,13 +560,21 @@ const OverviewPage = () => {
       tone: token.colorWarning,
       date: data?.latest_seizure?.event_date_text || data?.latest_seizure?.event_date || '暂无记录',
       summary: data?.latest_seizure?.summary || '当前还没有整理出最近一次发作摘要。',
+      status: undefined,
+      detail: undefined,
     },
     {
       key: 'admission',
-      title: '最近一次住院',
+      title: '最近一次住院周期',
       tone: token.colorInfo,
-      date: data?.latest_admission?.event_date_text || data?.latest_admission?.event_date || '暂无记录',
-      summary: data?.latest_admission?.summary || '当前还没有整理出最近一次住院摘要。',
+      date:
+        data?.latest_admission?.period_text ||
+        data?.latest_admission?.admission_date_text ||
+        data?.latest_admission?.admission_date ||
+        '暂无记录',
+      summary: data?.latest_admission?.summary || '当前还没有整理出最近一次住院周期摘要。',
+      status: data?.latest_admission?.status || undefined,
+      detail: data?.latest_admission?.discharge_summary || undefined,
     },
   ];
 
@@ -693,10 +703,10 @@ const OverviewPage = () => {
         <HeaderMeta>
           <Kicker>最近动态</Kicker>
           <Typography.Title level={4} style={{ margin: 0 }}>
-            最近一次发作与住院
+            最近一次发作与住院周期
           </Typography.Title>
           <Typography.Text type="secondary">
-            适合先快速看清最近一次发作和最近一次住院。
+            适合先快速看清最近一次发作和最近一次住院周期。
           </Typography.Text>
         </HeaderMeta>
 
@@ -709,12 +719,20 @@ const OverviewPage = () => {
               }}
             >
               <Space size={10} align="start" style={{ width: '100%', justifyContent: 'space-between' }}>
-                <Typography.Text strong>{item.title}</Typography.Text>
+                <Space size={[8, 8]} wrap>
+                  <Typography.Text strong>{item.title}</Typography.Text>
+                  {item.status ? <Tag color="processing">{item.status}</Tag> : null}
+                </Space>
                 <Tag color="default">{item.date}</Tag>
               </Space>
               <div style={{ marginTop: 8 }}>
                 <ClampText>{item.summary}</ClampText>
               </div>
+              {item.detail ? (
+                <Typography.Text type="secondary" style={{ marginTop: 8 }}>
+                  {item.detail}
+                </Typography.Text>
+              ) : null}
             </SnapshotCard>
           ))}
         </SnapshotStack>

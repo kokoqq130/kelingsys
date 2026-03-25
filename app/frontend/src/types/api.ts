@@ -27,6 +27,7 @@ export interface MedicationItem {
 
 export interface EventItem {
   id: number;
+  admission_period_id?: number | null;
   source_document_id: number;
   event_date: string;
   event_date_text: string;
@@ -36,6 +37,8 @@ export interface EventItem {
   summary: string;
   detail_text: string;
   is_hospitalized: number;
+  admission_period_text?: string | null;
+  admission_status?: string | null;
   relative_path: string;
   raw_url?: string | null;
 }
@@ -113,6 +116,21 @@ export interface AbnormalLabItem {
   status: string;
 }
 
+export interface AdmissionPeriodSummary {
+  id: number;
+  title: string;
+  admission_date?: string | null;
+  admission_date_text?: string | null;
+  discharge_date?: string | null;
+  discharge_date_text?: string | null;
+  period_text: string;
+  status?: string | null;
+  summary: string;
+  discharge_summary?: string | null;
+  detail_text: string;
+  source_document_id: number;
+}
+
 export interface MedicationAdjustmentItem {
   id: number;
   document_id: number;
@@ -137,9 +155,18 @@ export interface OverviewResponse {
     summary: string;
   } | null;
   latest_admission?: {
-    event_date: string;
-    event_date_text: string;
+    id: number;
+    title: string;
+    admission_date?: string | null;
+    admission_date_text?: string | null;
+    discharge_date?: string | null;
+    discharge_date_text?: string | null;
+    period_text: string;
+    status?: string | null;
     summary: string;
+    discharge_summary?: string | null;
+    detail_text: string;
+    source_document_id: number;
   } | null;
   stats: {
     file_count: number;

@@ -36,10 +36,21 @@ class QueryService:
 
     latest_admission = self.connection.execute(
       """
-      SELECT event_date, event_date_text, summary
-      FROM events
-      WHERE event_type = 'admission'
-      ORDER BY event_date DESC
+      SELECT
+        id,
+        title,
+        admission_date,
+        admission_date_text,
+        discharge_date,
+        discharge_date_text,
+        period_text,
+        status,
+        summary,
+        discharge_summary,
+        detail_text,
+        source_document_id
+      FROM admission_periods
+      ORDER BY admission_date DESC, id DESC
       LIMIT 1
       """
     ).fetchone()
@@ -112,6 +123,7 @@ class QueryService:
       """
       SELECT
         e.id,
+        e.admission_period_id,
         e.source_document_id,
         e.event_date,
         e.event_date_text,
@@ -121,8 +133,11 @@ class QueryService:
         e.summary,
         e.detail_text,
         e.is_hospitalized,
+        ap.period_text AS admission_period_text,
+        ap.status AS admission_status,
         f.relative_path
       FROM events e
+      LEFT JOIN admission_periods ap ON ap.id = e.admission_period_id
       JOIN files f ON f.id = e.source_file_id
       ORDER BY e.event_date DESC, e.id DESC
       """

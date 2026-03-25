@@ -152,15 +152,16 @@ const { useBreakpoint } = Grid;
 
 const kindLabelMap: Record<string, string> = {
   main_summary: '主文档',
-  admission_note: '住院整理',
+  admission_note: '住院周期整理',
+  discharge_summary: '出院小结',
   report_index: '报告目录',
   other: '其他文档',
 };
 
-const groupOrder = ['admission_note', 'report_index', 'other'];
+const groupOrder = ['admission_note', 'discharge_summary', 'report_index', 'other'];
 
 function resolveGroupIcon(kind: string) {
-  if (kind === 'admission_note') {
+  if (kind === 'admission_note' || kind === 'discharge_summary') {
     return <FileProtectOutlined />;
   }
   if (kind === 'report_index') {
@@ -263,14 +264,14 @@ const DocumentsPage = () => {
   const priorityDescription =
     mainDocument?.title === detail?.title
       ? '当前正在查看主文档，适合优先提供给医生快速了解整体情况。'
-      : '医生沟通时建议先看这份主文档，再补充住院整理和原始资料。';
+      : '医生沟通时建议先看这份主文档，再补充住院周期资料和原始资料。';
 
   return (
     <Space direction="vertical" size={16} style={{ width: '100%' }}>
       <div>
         <Typography.Title level={isMobile ? 4 : 3}>文档资料</Typography.Title>
         <Typography.Paragraph>
-          主文档放在最前面，便于先看整体情况；其他住院整理和报告目录放在后面，按需要继续展开查看。
+          主文档放在最前面，便于先看整体情况；其他住院周期资料和报告目录放在后面，按需要继续展开查看。
         </Typography.Paragraph>
       </div>
 
@@ -319,7 +320,7 @@ const DocumentsPage = () => {
                 <div>
                   <Typography.Text strong>其他资料</Typography.Text>
                   <Typography.Paragraph type="secondary" style={{ marginTop: 6, marginBottom: 0 }}>
-                    住院整理和报告目录放在这里，按分类展开即可。
+                    住院周期整理、出院小结和报告目录放在这里，按分类展开即可。
                   </Typography.Paragraph>
                 </div>
 

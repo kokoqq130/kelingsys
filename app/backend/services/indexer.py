@@ -85,13 +85,23 @@ def rebuild_index() -> None:
         )
 
       parsed = _parse_document(document)
+      admission_period_id_map: dict[str, int] = {}
+      for admission_period in parsed["admission_periods"]:
+        period_id = _upsert_admission_period(
+          connection=connection,
+          admission_period=admission_period,
+          source_document_id=document_id,
+          source_file_id=source_file_id,
+        )
+        admission_period_id_map[admission_period["cycle_key"]] = period_id
+
       for event in parsed["events"]:
         connection.execute(
           """
           INSERT INTO events (
             event_date, event_date_text, event_time_text, event_type, title, summary,
-            detail_text, is_hospitalized, source_document_id, source_file_id
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            detail_text, is_hospitalized, admission_period_id, source_document_id, source_file_id
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           """,
           (
             event["event_date"],
@@ -102,6 +112,7 @@ def rebuild_index() -> None:
             event["summary"],
             event["detail_text"],
             int(event["is_hospitalized"]),
+            admission_period_id_map.get(event.get("admission_cycle_key", "")),
             document_id,
             source_file_id,
           ),
@@ -215,7 +226,9 @@ def _create_schema(connection: sqlite3.Connection) -> None:
       content_text TEXT NOT NULL
     );
 
-    CREATE TABLE IF NOT EXISTS events (
+    DROP TABLE IF EXISTS events;
+
+    CREATE TABLE events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       event_date TEXT,
       event_date_text TEXT,
@@ -225,6 +238,27 @@ def _create_schema(connection: sqlite3.Connection) -> None:
       summary TEXT NOT NULL,
       detail_text TEXT NOT NULL,
       is_hospitalized INTEGER NOT NULL DEFAULT 0,
+      admission_period_id INTEGER,
+      source_document_id INTEGER NOT NULL,
+      source_file_id INTEGER NOT NULL
+    );
+
+    DROP TABLE IF EXISTS admission_periods;
+
+    CREATE TABLE admission_periods (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      cycle_key TEXT UNIQUE NOT NULL,
+      folder_path TEXT NOT NULL,
+      title TEXT NOT NULL,
+      admission_date TEXT,
+      admission_date_text TEXT,
+      discharge_date TEXT,
+      discharge_date_text TEXT,
+      period_text TEXT NOT NULL,
+      status TEXT,
+      summary TEXT NOT NULL,
+      discharge_summary TEXT,
+      detail_text TEXT NOT NULL,
       source_document_id INTEGER NOT NULL,
       source_file_id INTEGER NOT NULL
     );
@@ -285,6 +319,7 @@ def _clear_schema(connection: sqlite3.Connection) -> None:
     DELETE FROM files;
     DELETE FROM documents;
     DELETE FROM events;
+    DELETE FROM admission_periods;
     DELETE FROM medications;
     DELETE FROM lab_results;
     DELETE FROM document_file_links;
@@ -329,6 +364,8 @@ def _classify_doc_kind(path: Path) -> str:
     return "main_summary"
   if path.name.endswith("住院整理.md"):
     return "admission_note"
+  if "出院" in path.stem and "小结" in path.stem:
+    return "discharge_summary"
   if path.name == "报告索引.md":
     return "report_index"
   return "other"
@@ -346,6 +383,19 @@ def _plain_text(value: str) -> str:
   text = value.strip()
   text = text.replace("**", "").replace("*", "")
   return text.strip()
+
+
+def _clean_field_value(value: str) -> str:
+  return value.strip().strip("。 ")
+
+
+def _none_if_empty(value: str | None) -> str | None:
+  return value or None
+
+
+def _build_admission_cycle_key(relative_path: str) -> str:
+  folder_path = Path(relative_path).parent.as_posix()
+  return folder_path if folder_path not in {"", "."} else relative_path
 
 
 def _insert_file(connection: sqlite3.Connection, record: FileRecord) -> int:
@@ -378,6 +428,68 @@ def _insert_document(connection: sqlite3.Connection, file_id: int, document: Doc
   return int(cursor.lastrowid)
 
 
+def _upsert_admission_period(
+  *,
+  connection: sqlite3.Connection,
+  admission_period: dict,
+  source_document_id: int,
+  source_file_id: int,
+) -> int:
+  connection.execute(
+    """
+    INSERT INTO admission_periods (
+      cycle_key, folder_path, title, admission_date, admission_date_text,
+      discharge_date, discharge_date_text, period_text, status, summary,
+      discharge_summary, detail_text, source_document_id, source_file_id
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ON CONFLICT(cycle_key) DO UPDATE SET
+      folder_path = excluded.folder_path,
+      title = excluded.title,
+      admission_date = COALESCE(excluded.admission_date, admission_periods.admission_date),
+      admission_date_text = COALESCE(excluded.admission_date_text, admission_periods.admission_date_text),
+      discharge_date = COALESCE(excluded.discharge_date, admission_periods.discharge_date),
+      discharge_date_text = COALESCE(excluded.discharge_date_text, admission_periods.discharge_date_text),
+      period_text = CASE
+        WHEN excluded.period_text <> '' THEN excluded.period_text
+        ELSE admission_periods.period_text
+      END,
+      status = COALESCE(excluded.status, admission_periods.status),
+      summary = CASE
+        WHEN excluded.summary <> '' THEN excluded.summary
+        ELSE admission_periods.summary
+      END,
+      discharge_summary = COALESCE(excluded.discharge_summary, admission_periods.discharge_summary),
+      detail_text = CASE
+        WHEN excluded.detail_text <> '' THEN excluded.detail_text
+        ELSE admission_periods.detail_text
+      END,
+      source_document_id = excluded.source_document_id,
+      source_file_id = excluded.source_file_id
+    """,
+    (
+      admission_period["cycle_key"],
+      admission_period["folder_path"],
+      admission_period["title"],
+      _none_if_empty(admission_period.get("admission_date")),
+      _none_if_empty(admission_period.get("admission_date_text")),
+      _none_if_empty(admission_period.get("discharge_date")),
+      _none_if_empty(admission_period.get("discharge_date_text")),
+      admission_period["period_text"],
+      _none_if_empty(admission_period.get("status")),
+      admission_period["summary"],
+      _none_if_empty(admission_period.get("discharge_summary")),
+      admission_period["detail_text"],
+      source_document_id,
+      source_file_id,
+    ),
+  )
+  row = connection.execute(
+    "SELECT id FROM admission_periods WHERE cycle_key = ?",
+    (admission_period["cycle_key"],),
+  ).fetchone()
+  return int(row["id"])
+
+
 def _resolve_markdown_links(document: DocumentRecord, file_id_map: dict[str, int]) -> list[dict[str, int | str]]:
   source_path = PROJECT_ROOT / document.relative_path
   links: list[dict[str, int | str]] = []
@@ -408,7 +520,13 @@ def _parse_document(document: DocumentRecord) -> dict[str, list[dict] | dict | N
     return _parse_main_summary(document)
   if document.doc_kind == "admission_note":
     return _parse_admission_note(document)
-  return {"overview": None, "events": [], "medications": [], "lab_results": []}
+  return {
+    "overview": None,
+    "events": [],
+    "medications": [],
+    "lab_results": [],
+    "admission_periods": [],
+  }
 
 
 def _parse_main_summary(document: DocumentRecord) -> dict[str, list[dict] | dict]:
@@ -533,58 +651,75 @@ def _parse_main_summary(document: DocumentRecord) -> dict[str, list[dict] | dict
         overview["current_medications"].append(record)
 
     elif section == "history":
-      if plain.startswith("- 既往代谢指标（"):
-        _, current_history_date = _extract_date(plain)
-      elif plain.startswith("- ") and indent == 0:
-        current_history_date = ""
-        overview["highlights"].append(plain[2:].strip())
-      elif plain.startswith("- ") and indent > 0 and current_history_date:
+      if plain.startswith("- ") and indent == 0:
+        heading = plain[2:].strip()
+        _, current_history_date = _extract_date(heading)
+        overview["highlights"].append(heading.rstrip("："))
+      elif plain.startswith("- ") and indent > 0:
         result_line = plain[2:].strip()
-        panel_name = re.split(r"[：:]", result_line, maxsplit=1)[0].strip() or result_line
-        lab_results.extend(
-          _build_lab_records(
-            test_group="长期参考",
-            panel_name=panel_name,
-            result_lines=[result_line],
-            result_date=current_history_date,
-            result_date_text=_format_display_date(current_history_date),
-            is_approximate=False,
-          )
-        )
-        continue
-        lab_record = _build_lab_record(
-          test_group="长期参考",
-          test_name=result_line.split("：", 1)[0].strip(),
-          result_text=result_line,
-          result_date=current_history_date,
-          result_date_text=_format_display_date(current_history_date),
-          is_approximate=False,
-        )
-        if lab_record:
-          lab_results.append(lab_record)
-      elif plain.startswith("- "):
-        overview["highlights"].append(plain[2:].strip())
+        result_date_text, result_date = _extract_date(result_line)
+        final_result_date = result_date or current_history_date
+        final_result_date_text = result_date_text or _format_display_date(final_result_date)
+
+        if "：" in result_line and final_result_date:
+          panel_name = re.split(r"[：:]", result_line, maxsplit=1)[0].strip() or result_line
+          if len(DATE_RE.findall(result_line)) > 1:
+            lab_record = _build_lab_record(
+              test_group="长期参考",
+              panel_name=panel_name,
+              test_name=panel_name,
+              result_text=result_line,
+              result_date=final_result_date,
+              result_date_text=final_result_date_text,
+              is_approximate=False,
+            )
+            if lab_record:
+              lab_results.append(lab_record)
+          else:
+            lab_results.extend(
+              _build_lab_records(
+                test_group="长期参考",
+                panel_name=panel_name,
+                result_lines=[result_line],
+                result_date=final_result_date,
+                result_date_text=final_result_date_text,
+                is_approximate=False,
+              )
+            )
+        else:
+          overview["highlights"].append(result_line)
 
   return {
     "overview": overview,
     "events": events,
     "medications": medications,
     "lab_results": lab_results,
+    "admission_periods": [],
   }
 
 
 def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | dict | None]:
   events: list[dict] = []
   labs: list[dict] = []
+  admission_periods: list[dict] = []
   lines = document.content_text.splitlines()
   section = ""
   admission_date = ""
   admission_date_text = ""
+  discharge_date = ""
+  discharge_date_text = ""
+  explicit_period_text = ""
+  admission_status = ""
+  admission_reason = ""
+  discharge_summary = ""
   main_event = ""
   treatment = ""
   symptoms = ""
+  medication_change = ""
   current_lab_name = ""
   current_lab_details: list[str] = []
+  admission_cycle_key = _build_admission_cycle_key(document.relative_path)
+  folder_path = admission_cycle_key
 
   def flush_lab() -> None:
     nonlocal current_lab_name, current_lab_details
@@ -640,15 +775,35 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
       continue
 
     if section == "overview":
-      if plain.startswith("- 住院时间："):
-        admission_date_text = plain.split("：", 1)[1].strip("。 ")
+      if plain.startswith("- 入院时间："):
+        admission_date_text = _clean_field_value(plain.split("：", 1)[1])
         _, admission_date = _extract_date(admission_date_text)
+      elif plain.startswith("- 住院时间："):
+        admission_date_text = _clean_field_value(plain.split("：", 1)[1])
+        _, admission_date = _extract_date(admission_date_text)
+      elif plain.startswith("- 出院时间："):
+        discharge_date_text = _clean_field_value(plain.split("：", 1)[1])
+        _, discharge_date = _extract_date(discharge_date_text)
+      elif plain.startswith("- 住院周期："):
+        explicit_period_text = _clean_field_value(plain.split("：", 1)[1])
+      elif plain.startswith("- 当前状态："):
+        admission_status = _clean_field_value(plain.split("：", 1)[1])
+      elif plain.startswith("- 入院原因："):
+        admission_reason = _clean_field_value(plain.split("：", 1)[1])
       elif plain.startswith("- 本次主要事件："):
-        main_event = plain.split("：", 1)[1].strip()
+        main_event = _clean_field_value(plain.split("：", 1)[1])
       elif plain.startswith("- 处置经过："):
-        treatment = plain.split("：", 1)[1].strip()
+        treatment = _clean_field_value(plain.split("：", 1)[1])
       elif plain.startswith("- 本次住院主要症状："):
-        symptoms = plain.split("：", 1)[1].strip()
+        symptoms = _clean_field_value(plain.split("：", 1)[1])
+      elif plain.startswith("- 周期内主要症状："):
+        symptoms = _clean_field_value(plain.split("：", 1)[1])
+      elif plain.startswith("- 本次住院后的调药："):
+        medication_change = _clean_field_value(plain.split("：", 1)[1])
+      elif plain.startswith("- 出院结论："):
+        discharge_summary = _clean_field_value(plain.split("：", 1)[1])
+      elif plain.startswith("- 出院情况："):
+        discharge_summary = _clean_field_value(plain.split("：", 1)[1])
 
     elif section == "labs":
       if indent == 0 and plain.startswith("- ") and stripped.startswith("- **"):
@@ -659,6 +814,41 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
 
   flush_lab()
 
+  normalized_status = admission_status or ("已出院" if discharge_date else "")
+  period_text = explicit_period_text or _build_admission_period_text(
+    admission_date_text=admission_date_text,
+    discharge_date_text=discharge_date_text,
+    status=normalized_status,
+  )
+  period_summary = admission_reason or symptoms or main_event or "本次住院记录"
+  detail_parts = [
+    admission_reason,
+    main_event,
+    treatment,
+    symptoms,
+    medication_change,
+    discharge_summary,
+  ]
+  period_detail_text = "；".join(part for part in detail_parts if part)
+
+  if admission_date or admission_date_text:
+    admission_periods.append(
+      {
+        "cycle_key": admission_cycle_key,
+        "folder_path": folder_path,
+        "title": document.title,
+        "admission_date": admission_date or None,
+        "admission_date_text": admission_date_text or None,
+        "discharge_date": discharge_date or None,
+        "discharge_date_text": discharge_date_text or None,
+        "period_text": period_text,
+        "status": normalized_status or None,
+        "summary": period_summary,
+        "discharge_summary": discharge_summary or None,
+        "detail_text": period_detail_text or period_summary,
+      }
+    )
+
   if admission_date:
     events.append(
       {
@@ -666,10 +856,11 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
         "event_date_text": admission_date_text,
         "event_time_text": None,
         "event_type": "admission",
-        "title": "住院",
-        "summary": symptoms or main_event or "本次住院记录",
-        "detail_text": "；".join(filter(None, [main_event, treatment, symptoms])),
+        "title": "入院",
+        "summary": period_summary,
+        "detail_text": period_detail_text or period_summary,
         "is_hospitalized": True,
+        "admission_cycle_key": admission_cycle_key,
       }
     )
 
@@ -682,8 +873,9 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
         "event_type": "seizure",
         "title": "本次癫痫发作",
         "summary": main_event,
-        "detail_text": "；".join(filter(None, [main_event, treatment, symptoms])),
+        "detail_text": period_detail_text or main_event,
         "is_hospitalized": True,
+        "admission_cycle_key": admission_cycle_key,
       }
     )
 
@@ -702,10 +894,46 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
         "summary": summary,
         "detail_text": "；".join(lab["test_name"] for lab in labs),
         "is_hospitalized": True,
+        "admission_cycle_key": admission_cycle_key,
       }
     )
 
-  return {"overview": None, "events": events, "medications": [], "lab_results": labs}
+  if discharge_date:
+    discharge_event_summary = discharge_summary or normalized_status or "本次住院已出院"
+    events.append(
+      {
+        "event_date": discharge_date,
+        "event_date_text": discharge_date_text,
+        "event_time_text": None,
+        "event_type": "discharge",
+        "title": "出院",
+        "summary": discharge_event_summary,
+        "detail_text": period_detail_text or discharge_event_summary,
+        "is_hospitalized": True,
+        "admission_cycle_key": admission_cycle_key,
+      }
+    )
+
+  return {
+    "overview": None,
+    "events": events,
+    "medications": [],
+    "lab_results": labs,
+    "admission_periods": admission_periods,
+  }
+
+
+def _build_admission_period_text(
+  *,
+  admission_date_text: str,
+  discharge_date_text: str,
+  status: str,
+) -> str:
+  if admission_date_text and discharge_date_text:
+    return f"{admission_date_text} - {discharge_date_text}"
+  if admission_date_text and status:
+    return f"{admission_date_text}起 · {status}"
+  return admission_date_text or discharge_date_text or "住院周期待补"
 
 
 def _build_lab_records(

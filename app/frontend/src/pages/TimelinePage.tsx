@@ -10,7 +10,8 @@ import { buildPreviewHighlightTerms, inferPreviewFileType, resolvePreviewTitle }
 
 const eventTypeMap: Record<string, { label: string; color: string }> = {
   seizure: { label: '发作', color: 'red' },
-  admission: { label: '住院', color: 'blue' },
+  admission: { label: '入院', color: 'blue' },
+  discharge: { label: '出院', color: 'cyan' },
   medication_adjustment: { label: '调药', color: 'gold' },
   lab: { label: '检查', color: 'green' },
 };
@@ -85,7 +86,8 @@ const TimelinePage = () => {
     const types = Array.from(new Set((data ?? []).map(item => item.event_type)));
     const labels: Record<string, string> = {
       seizure: '发作',
-      admission: '住院',
+      admission: '入院',
+      discharge: '出院',
       medication_adjustment: '调药',
       lab: '检查',
     };
@@ -168,7 +170,11 @@ const TimelinePage = () => {
                       {eventTypeMap[item.event_type]?.label || item.event_type}
                     </Tag>
                     {item.is_hospitalized ? <Tag color="purple">住院相关</Tag> : null}
+                    {item.admission_status ? <Tag color="processing">{item.admission_status}</Tag> : null}
                   </EventMeta>
+                  {item.admission_period_text ? (
+                    <Typography.Text type="secondary">{item.admission_period_text}</Typography.Text>
+                  ) : null}
                   <Typography.Text>{item.summary}</Typography.Text>
                   <Typography.Text type="secondary">{item.detail_text}</Typography.Text>
                   {item.source_document_id || item.raw_url ? (

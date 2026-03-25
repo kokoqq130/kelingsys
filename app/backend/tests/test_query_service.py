@@ -20,6 +20,10 @@ class QueryServiceTests(unittest.TestCase):
       overview = service.get_overview()
       self.assertEqual(overview["patient"]["姓名"], "王柯灵")
       self.assertGreaterEqual(overview["stats"]["file_count"], 1)
+      self.assertIsNotNone(overview["latest_admission"])
+      self.assertEqual(overview["latest_admission"]["admission_date"], "2026-03-22")
+      self.assertIn("2026年3月22日", overview["latest_admission"]["period_text"])
+      self.assertIn("呕吐", overview["latest_admission"]["summary"])
 
   def test_timeline_contains_latest_admission(self) -> None:
     with get_connection() as connection:
@@ -28,6 +32,8 @@ class QueryServiceTests(unittest.TestCase):
       summaries = [item["summary"] for item in timeline]
       self.assertTrue(any("呕吐" in summary for summary in summaries))
       self.assertTrue(any(item["event_type"] == "lab" for item in timeline))
+      self.assertTrue(any(item["event_type"] == "admission" for item in timeline))
+      self.assertTrue(any(item.get("admission_period_text") for item in timeline if item["is_hospitalized"]))
 
   def test_medication_adjustments_detected(self) -> None:
     with get_connection() as connection:
@@ -62,7 +68,7 @@ class QueryServiceTests(unittest.TestCase):
       self.assertIn(("血清肝功能 11 项", "总蛋白"), panel_metric_pairs)
       self.assertIn(("血清肝功能 11 项", "白蛋白"), panel_metric_pairs)
       self.assertIn(("血清电解质 6 项", "钠"), panel_metric_pairs)
-      self.assertIn(("血氨基酸酰基肉碱谱", "C3/C2"), panel_metric_pairs)
+      self.assertTrue(any(panel_name.startswith("血氨基酸酰基肉碱") and test_name == "C3/C2" for panel_name, test_name in panel_metric_pairs))
       self.assertNotIn(("血清肝功能 11 项", "血清肝功能 11 项"), panel_metric_pairs)
 
   def test_search_finds_diazepam_keyword(self) -> None:

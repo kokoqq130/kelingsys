@@ -1,6 +1,7 @@
 param(
   [string]$BindHost = '127.0.0.1',
-  [int]$Port = 5173
+  [int]$Port = 5173,
+  [string]$ApiProxyTarget = 'http://127.0.0.1:8000'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -14,6 +15,7 @@ try {
   if (-not (Test-Path $nodeModulesPath)) {
     pnpm install
   }
+  $env:VITE_API_PROXY_TARGET = $ApiProxyTarget
   pnpm run dev -- --host $BindHost --port $Port
 }
 finally {
