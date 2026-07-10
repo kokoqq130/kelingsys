@@ -16,7 +16,18 @@ def write_json(path: Path, payload: Any) -> None:
   path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
-def export_static_site(output_dir: Path) -> None:
+ACKNOWLEDGEMENT = "I_UNDERSTAND"
+
+
+def export_static_site(
+  output_dir: Path,
+  *,
+  acknowledgement: str,
+  include_raw: bool = False,
+) -> None:
+  if acknowledgement != ACKNOWLEDGEMENT:
+    raise ValueError("Explicit sensitive-data acknowledgement is required.")
+
   output_dir = output_dir.resolve()
 
   if output_dir.exists():
@@ -69,7 +80,17 @@ def export_static_site(output_dir: Path) -> None:
       if detail:
         write_json(admission_details_dir / f"{admission['id']}.json", detail)
 
-  shutil.copytree(DATA_ROOT, output_dir / "raw", dirs_exist_ok=True)
+  write_json(
+    output_dir / "SENSITIVE-DATA-MANIFEST.json",
+    {
+      "warning": "This export contains private medical information and must not be publicly deployed.",
+      "includes_raw_files": include_raw,
+      "data_root": "private-medical-data",
+    },
+  )
+
+  if include_raw:
+    shutil.copytree(DATA_ROOT, output_dir / "raw", dirs_exist_ok=True)
 
 
 def main() -> None:
@@ -77,10 +98,25 @@ def main() -> None:
   parser.add_argument(
     "--output-dir",
     required=True,
-    help="Directory that will receive static-data and raw assets.",
+    help="Directory that will receive the sensitive static data snapshot.",
+  )
+  parser.add_argument(
+    "--acknowledge-sensitive-data",
+    required=True,
+    choices=[ACKNOWLEDGEMENT],
+    help="Explicit acknowledgement required before exporting private medical data.",
+  )
+  parser.add_argument(
+    "--include-raw",
+    action="store_true",
+    help="Also copy every raw medical file. Disabled by default because this is high risk.",
   )
   args = parser.parse_args()
-  export_static_site(Path(args.output_dir))
+  export_static_site(
+    Path(args.output_dir),
+    acknowledgement=args.acknowledge_sensitive_data,
+    include_raw=args.include_raw,
+  )
 
 
 if __name__ == "__main__":

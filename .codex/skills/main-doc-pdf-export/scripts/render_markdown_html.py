@@ -2,8 +2,15 @@ from __future__ import annotations
 
 import argparse
 import html
+import math
 import re
 from pathlib import Path
+from urllib.parse import unquote, urlparse
+
+try:
+    from PIL import Image
+except ImportError:  # PDF export still works without image slicing.
+    Image = None
 
 
 INLINE_CODE_RE = re.compile(r"`([^`]+)`")
@@ -45,15 +52,51 @@ def render_table(lines: list[str]) -> str:
     return f"<table>{thead}{tbody}</table>"
 
 
-def render_image(line: str) -> str:
+def render_image(line: str, markdown_dir: Path) -> str:
     match = IMAGE_RE.fullmatch(line.strip())
     if not match:
         return ""
+
     alt, src = match.groups()
-    return f'<figure><img src="{html.escape(src, quote=True)}" alt="{html.escape(alt, quote=True)}"></figure>'
+    escaped_src = html.escape(src, quote=True)
+    escaped_alt = html.escape(alt, quote=True)
+    parsed = urlparse(src)
+    image_path = None
+    if not parsed.scheme and not src.startswith("#"):
+        image_path = (markdown_dir / unquote(parsed.path)).resolve()
+
+    if Image is None or image_path is None or not image_path.is_file():
+        return f'<figure class="report-page"><img src="{escaped_src}" alt="{escaped_alt}"></figure>'
+
+    try:
+        with Image.open(image_path) as image:
+            width, height = image.size
+    except Exception:
+        return f'<figure class="report-page"><img src="{escaped_src}" alt="{escaped_alt}"></figure>'
+
+    # Ordinary portrait reports are scaled to one page. Very tall stitched images
+    # are divided into page-sized viewports so Chrome does not create blank tail pages.
+    if width <= 0 or height <= 0 or height / width <= 1.7:
+        return f'<figure class="report-page"><img src="{escaped_src}" alt="{escaped_alt}"></figure>'
+
+    max_slice_height = max(1, int(width * 1.22))
+    slice_count = math.ceil(height / max_slice_height)
+    slices = []
+    for index in range(slice_count):
+        top = index * max_slice_height
+        slice_height = min(max_slice_height, height - top)
+        offset_percent = top / height * 100
+        label = f"{escaped_alt}（第{index + 1}/{slice_count}页）"
+        slices.append(
+            f'<figure class="report-slice" style="aspect-ratio: {width} / {slice_height};">'
+            f'<img src="{escaped_src}" alt="{label}" '
+            f'style="transform: translateY(-{offset_percent:.8f}%);">'
+            '</figure>'
+        )
+    return "\n".join(slices)
 
 
-def render_markdown(markdown_text: str) -> str:
+def render_markdown(markdown_text: str, markdown_dir: Path) -> str:
     lines = markdown_text.splitlines()
     blocks: list[str] = []
     i = 0
@@ -85,7 +128,7 @@ def render_markdown(markdown_text: str) -> str:
             continue
 
         if IMAGE_RE.fullmatch(stripped):
-            blocks.append(render_image(stripped))
+            blocks.append(render_image(stripped, markdown_dir))
             i += 1
             continue
 
@@ -206,7 +249,47 @@ def build_html(body: str, title: str) -> str:
       margin: 12px auto;
     }}
     figure {{ margin: 16px 0; }}
+    figure.report-slice {{
+      position: relative;
+      width: 100%;
+      overflow: hidden;
+    }}
+    figure.report-slice img {{
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      max-width: none;
+      margin: 0;
+    }}
     a {{ color: #0969da; text-decoration: none; }}
+    @page {{ size: Letter; margin: 0.45in; }}
+    @media print {{
+      body {{
+        margin: 0;
+        max-width: none;
+        padding: 0;
+      }}
+      figure.report-page, figure.report-slice {{
+        break-before: page;
+        break-inside: avoid;
+        margin: 0;
+      }}
+      figure.report-page {{
+        height: 9.8in;
+        display: flex;
+        align-items: flex-start;
+        justify-content: center;
+      }}
+      figure.report-page img {{
+        max-width: 100%;
+        max-height: 9.8in;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        margin: 0 auto;
+      }}
+    }}
   </style>
 </head>
 <body>
@@ -225,7 +308,7 @@ def main() -> int:
     md_path = Path(args.markdown_path).resolve()
     html_path = Path(args.html_output).resolve()
     markdown_text = md_path.read_text(encoding="utf-8")
-    body = render_markdown(markdown_text)
+    body = render_markdown(markdown_text, md_path.parent)
     title = md_path.stem
     html_path.write_text(build_html(body, title), encoding="utf-8")
     print(html_path)

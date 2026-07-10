@@ -20,3 +20,7 @@ data/
 _vendor/
 
 .DS_Store
+
+.idea/
+
+tmp/

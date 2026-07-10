@@ -9,18 +9,25 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8
 
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$projectRoot = (Resolve-Path (Join-Path $scriptDir '..\..\..\..')).Path
+
 function Get-PythonPath {
+    if ($env:BACKEND_PYTHON -and (Test-Path $env:BACKEND_PYTHON)) {
+        return (Resolve-Path $env:BACKEND_PYTHON).Path
+    }
+
+    $projectPython = Join-Path $projectRoot 'app\backend\.venv\Scripts\python.exe'
+    if (Test-Path $projectPython) {
+        return (Resolve-Path $projectPython).Path
+    }
+
     $cmd = Get-Command python -ErrorAction SilentlyContinue
     if ($cmd) {
         return $cmd.Source
     }
 
-    $fallback = 'C:\Users\wangf\AppData\Local\Python\pythoncore-3.14-64\python.exe'
-    if (Test-Path $fallback) {
-        return $fallback
-    }
-
-    throw 'Python executable not found. Add python to PATH or update the fallback path in this script.'
+    throw 'Python executable not found. Run scripts/Setup-Backend.ps1 or set BACKEND_PYTHON.'
 }
 
 function Get-BrowserPath {
@@ -39,9 +46,6 @@ function Get-BrowserPath {
 
     throw 'Chrome or Edge was not found in the expected local paths.'
 }
-
-$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$projectRoot = (Resolve-Path (Join-Path $scriptDir '..\..\..\..')).Path
 
 function Get-DefaultMainMarkdown {
     param(

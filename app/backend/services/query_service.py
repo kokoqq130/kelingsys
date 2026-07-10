@@ -26,10 +26,17 @@ class QueryService:
 
     latest_seizure = self.connection.execute(
       """
-      SELECT event_date, event_date_text, summary
-      FROM events
+      SELECT e.event_date, e.event_date_text, e.summary
+      FROM events e
+      JOIN documents d ON d.id = e.source_document_id
       WHERE event_type = 'seizure'
-      ORDER BY event_date DESC
+      ORDER BY
+        e.event_date DESC,
+        CASE
+          WHEN d.doc_kind = 'main_summary' AND e.is_hospitalized = 1 THEN 1
+          ELSE 0
+        END,
+        e.id DESC
       LIMIT 1
       """
     ).fetchone()
@@ -141,14 +148,18 @@ class QueryService:
         e.is_hospitalized,
         ap.period_text AS admission_period_text,
         ap.status AS admission_status,
+        d.doc_kind,
         f.relative_path
       FROM events e
       LEFT JOIN admission_periods ap ON ap.id = e.admission_period_id
+      JOIN documents d ON d.id = e.source_document_id
       JOIN files f ON f.id = e.source_file_id
       ORDER BY e.event_date DESC, e.id DESC
       """
     ).fetchall()
-    return [dict(row) | {"raw_url": self._raw_url(row["relative_path"])} for row in rows]
+    timeline_items = [dict(row) for row in rows]
+    deduped_items = self._dedupe_timeline_events(timeline_items)
+    return [item | {"raw_url": self._raw_url(item["relative_path"])} for item in deduped_items]
 
   def get_lab_groups(self) -> list[dict]:
     rows = self.connection.execute(
@@ -205,8 +216,10 @@ class QueryService:
         e.event_date_text,
         e.summary,
         e.detail_text,
+        d.doc_kind,
         f.relative_path
       FROM events e
+      JOIN documents d ON d.id = e.source_document_id
       JOIN files f ON f.id = e.source_file_id
       WHERE e.event_type = 'medication_adjustment'
       ORDER BY e.event_date DESC, e.id DESC
@@ -216,8 +229,8 @@ class QueryService:
     return {
       "current": [dict(row) | {"raw_url": self._raw_url(row["relative_path"])} for row in current_rows],
       "adjustments": [
-        dict(row) | {"raw_url": self._raw_url(row["relative_path"])}
-        for row in adjustment_rows
+        item | {"raw_url": self._raw_url(item["relative_path"])}
+        for item in self._dedupe_document_events([dict(row) for row in adjustment_rows])
       ],
     }
 
@@ -503,6 +516,55 @@ class QueryService:
       WHERE e.admission_period_id = ?{document_clause}
       ORDER BY e.event_date ASC, e.id ASC
     """
+
+  @staticmethod
+  def _dedupe_timeline_events(rows: list[dict]) -> list[dict]:
+    detailed_event_keys = {
+      (row["event_date"], row["event_type"])
+      for row in rows
+      if (
+        row["event_type"] in {"seizure", "medication_adjustment"}
+        and row["event_date"]
+        and row["doc_kind"] != "main_summary"
+        and bool(row["is_hospitalized"])
+      )
+    }
+
+    filtered_rows: list[dict] = []
+    for row in rows:
+      if (
+        row["event_type"] in {"seizure", "medication_adjustment"}
+        and row["event_date"]
+        and row["doc_kind"] == "main_summary"
+        and bool(row["is_hospitalized"])
+        and (row["event_date"], row["event_type"]) in detailed_event_keys
+      ):
+        continue
+
+      filtered_row = dict(row)
+      filtered_row.pop("doc_kind", None)
+      filtered_rows.append(filtered_row)
+
+    return filtered_rows
+
+  @staticmethod
+  def _dedupe_document_events(rows: list[dict]) -> list[dict]:
+    detailed_dates = {
+      row["event_date"]
+      for row in rows
+      if row.get("event_date") and row.get("doc_kind") != "main_summary"
+    }
+    filtered_rows: list[dict] = []
+    for row in rows:
+      if (
+        row.get("event_date") in detailed_dates
+        and row.get("doc_kind") == "main_summary"
+      ):
+        continue
+      filtered_row = dict(row)
+      filtered_row.pop("doc_kind", None)
+      filtered_rows.append(filtered_row)
+    return filtered_rows
 
   @staticmethod
   def _raw_url(relative_path: str) -> str | None:

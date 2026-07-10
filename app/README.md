@@ -1,102 +1,75 @@
-# 查询系统启动说明
+# 本地查询页面
 
-## 目录
+该应用只负责读取项目中的医疗资料并在本地展示，不承担复杂表单录入，也不以公开部署为目标。
 
-- `frontend/`：前端查询界面
-- `backend/`：FastAPI 索引与查询服务
+## 启动
 
-## 启动方式
-
-### 方式 1：分别启动
-
-1. 前端：
-
-在 `app/frontend/` 目录下可以直接运行：
-
-```powershell
-pnpm run dev
-```
-
-也可以从项目根目录运行：
-
-```powershell
-.\scripts\Start-Frontend.ps1
-```
-
-2. 后端：
-
-后端统一通过项目内虚拟环境 `app/backend/.venv` 启动。该虚拟环境统一固定为 Python 3.12；首次启动时，脚本会自动创建虚拟环境并安装 `requirements.txt`（包含 PaddleOCR 依赖）：
-
-```powershell
-.\scripts\Start-Backend.ps1
-```
-
-如需后端热重载，可显式加上：
-
-```powershell
-.\scripts\Start-Backend.ps1 -Reload
-```
-
-### 方式 2：一键启动
+从项目根目录运行：
 
 ```powershell
 .\scripts\Start-QueryApp.ps1
 ```
 
-该脚本会分别拉起前后端两个 PowerShell 窗口。
-
-## 默认地址
+默认地址：
 
 - 前端：`http://127.0.0.1:5173`
 - 后端：`http://127.0.0.1:8000`
 
-## 分享发布
-
-### 双模式约定
-
-- 开发模式：继续使用当前 FastAPI 接口，前端通过 `/api/*` 和 `/raw/*` 读取资料。
-- 分享模式：构建时自动重建索引、导出 `static-data/*.json`，并把 `柯灵用` 下的原始资料复制为静态 `raw/*` 文件。
-
-### 本地生成分享包
-
-在 `app/frontend/` 下执行：
+也可以分别运行：
 
 ```powershell
-pnpm run build:share
+.\scripts\Start-Backend.ps1
+.\scripts\Start-Frontend.ps1
 ```
 
-也可以从项目根目录执行：
+前端开发时可在 `app/frontend` 下运行：
 
 ```powershell
-.\scripts\Build-ShareSite.ps1
+pnpm run dev
 ```
 
-分享构建阶段调用后端导出脚本时，本地默认优先使用 `app/backend/.venv` 里的 Python 3.12；如果虚拟环境不存在，或之前是用别的 Python 版本创建的，请先运行：
+后端统一使用 `app/backend/.venv`，并固定为Python 3.12。首次使用可以运行：
 
 ```powershell
 .\scripts\Setup-Backend.ps1
 ```
 
-在 GitHub Actions 这类 CI 环境里，如果没有项目内虚拟环境，可以通过环境变量 `BACKEND_PYTHON` 显式指定 `actions/setup-python` 提供的解释器。
+## 数据来源
 
-构建完成后，分享站点产物位于 `app/frontend/dist/`。
+默认读取项目根目录的 `柯灵用/`。如果以后将医疗资料移到仓库外，可以先设置：
 
-### GitHub Actions + EdgeOne Pages
+```powershell
+$env:KELING_DATA_ROOT = 'D:\kelingsys-private'
+```
 
-- 仓库内提供了 `.github/workflows/deploy-share-to-edgeone.yml`。
-- 该工作流会自动安装后端依赖、构建前端分享包，并上传 `dist` 产物。
-- 如需直接部署到 EdgeOne Pages，请在 GitHub 仓库中配置：
-  - Secret：`EDGEONE_API_TOKEN`
-- 工作流默认手动触发，并支持填写：
-  - `deploy_env`：`preview` 或 `production`
-  - `project_name`：EdgeOne Pages 项目名，例如 `kelingsys-share`
+后端每次启动会自动重建SQLite索引。索引只是派生产物，真实内容仍以Markdown和原始报告为准。
 
-## 当前能力
+## 当前页面能力
 
 - 总览
-- 时间线
-- 用药变化
+- 当前用药
+- 癫痫及住院时间线
+- 住院周期详情
 - 检查结果
-- 文档资料预览
+- Markdown文档预览
 - 原始文件浏览
 - 全文搜索
+
+## 静态导出
+
+静态导出会包含真实医疗信息，因此默认禁止，也不再提供自动部署工作流。日常使用不需要运行 `build:share`。
+
+如果以后确实需要生成**仅供私下离线传递**的快照，必须显式设置安全确认变量；默认不复制原始报告：
+
+```powershell
+$env:ALLOW_SENSITIVE_STATIC_EXPORT = 'I_UNDERSTAND'
+pnpm run build:share
+```
+
+只有再次显式设置以下变量时才会复制全部原始医疗文件：
+
+```powershell
+$env:INCLUDE_RAW_MEDICAL_FILES = 'true'
+```
+
+不得把生成结果发布到公开网站。

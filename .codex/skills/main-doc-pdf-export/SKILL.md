@@ -14,12 +14,15 @@ description: 将当前工作区的主病情摘要 markdown 导出为 PDF。适�
 3. 默认输出到 `[柯灵基本信息.pdf](../../../柯灵用/柯灵基本信息.pdf)`。
 4. 导出的 PDF 需要尽量保证中文、表格、列表、图片都可读。
 5. 如果导出依赖浏览器无头打印，要注意这一步可能需要沙箱外权限。
+6. PDF 是派生产物；如果尚未得到用户确认，不覆盖旧 PDF，并通过一致性检查提示它已经过期。
 
 ## 使用脚本
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File "<skill-dir>\scripts\Export-MainDocPdf.ps1"
 ```
+
+脚本优先使用 `BACKEND_PYTHON`，其次使用项目 `app/backend/.venv`，不依赖个人电脑中的固定 Python 安装路径。
 
 只有在需要时才覆盖默认路径：
 

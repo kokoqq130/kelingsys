@@ -94,12 +94,27 @@ function run(command, args, options = {}) {
 }
 
 async function main() {
+  if (process.env.ALLOW_SENSITIVE_STATIC_EXPORT !== 'I_UNDERSTAND') {
+    throw new Error(
+      'Static export is disabled by default because it contains private medical information. ' +
+      'Use the local query page instead. If a private offline snapshot is truly required, set ' +
+      'ALLOW_SENSITIVE_STATIC_EXPORT=I_UNDERSTAND explicitly.',
+    );
+  }
+
   rmSync(sharePublicDir, { recursive: true, force: true });
   mkdirSync(sharePublicDir, { recursive: true });
 
   await run(
     resolvePythonCommand(),
-    ['export_static_site.py', '--output-dir', sharePublicDir],
+    [
+      'export_static_site.py',
+      '--output-dir',
+      sharePublicDir,
+      '--acknowledge-sensitive-data',
+      'I_UNDERSTAND',
+      ...(process.env.INCLUDE_RAW_MEDICAL_FILES === 'true' ? ['--include-raw'] : []),
+    ],
     {
       cwd: backendRoot,
       env: process.env,

@@ -719,7 +719,8 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
   labs: list[dict] = []
   admission_periods: list[dict] = []
   lines = document.content_text.splitlines()
-  section = ""
+  section_role = "other"
+  section_title = ""
   admission_date = ""
   admission_date_text = ""
   discharge_date = ""
@@ -736,6 +737,15 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
   current_lab_details: list[str] = []
   admission_cycle_key = _build_admission_cycle_key(document.relative_path)
   folder_path = admission_cycle_key
+
+  def append_unique(existing: str, value: str) -> str:
+    value = _clean_field_value(value)
+    if not value:
+      return existing
+    parts = [part.strip() for part in existing.split("；") if part.strip()]
+    if value not in parts:
+      parts.append(value)
+    return "；".join(parts)
 
   def flush_lab() -> None:
     nonlocal current_lab_name, current_lab_details
@@ -754,20 +764,23 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
     )
     current_lab_name = ""
     current_lab_details = []
-    return
-    result_text = "；".join(current_lab_details)
-    lab_record = _build_lab_record(
-      test_group="本次住院",
-      test_name=current_lab_name,
-      result_text=result_text,
-      result_date=admission_date,
-      result_date_text=admission_date_text,
-      is_approximate="约" in result_text,
-    )
-    if lab_record:
-      labs.append(lab_record)
-    current_lab_name = ""
-    current_lab_details = []
+
+  def classify_section(title: str) -> str:
+    if any(keyword in title for keyword in ["检查结果", "化验结果", "检验结果", "报告结果"]):
+      return "labs"
+    if any(keyword in title for keyword in ["调药", "用药调整", "药物调整", "出院用药"]):
+      return "medication"
+    if any(keyword in title for keyword in ["发作经过", "事件经过", "入院前经过", "主要事件"]):
+      return "event"
+    if any(keyword in title for keyword in ["住院处理", "处置", "治疗经过", "症状特点", "主要症状"]):
+      return "treatment_symptoms"
+    if "出院" in title:
+      return "discharge"
+    if any(keyword in title for keyword in ["住院概况", "住院周期", "基本情况"]):
+      return "overview"
+    return "other"
+
+  section_heading_re = re.compile(r"^[一二三四五六七八九十]+、\s*(?P<title>.+)$")
 
   for raw_line in lines:
     stripped = raw_line.strip()
@@ -777,56 +790,81 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
     plain = _plain_text(stripped)
     indent = len(raw_line) - len(raw_line.lstrip(" "))
 
-    if plain.startswith("一、"):
+    section_match = section_heading_re.match(plain)
+    if section_match:
       flush_lab()
-      section = "overview"
-      continue
-    if plain.startswith("二、"):
-      flush_lab()
-      section = "labs"
-      continue
-    if plain.startswith("三、") or plain.startswith("四、") or plain.startswith("五、"):
-      flush_lab()
-      section = "other"
+      section_title = section_match.group("title").strip()
+      section_role = classify_section(section_title)
       continue
 
-    if section == "overview":
-      if plain.startswith("- 入院时间："):
-        admission_date_text = _clean_field_value(plain.split("：", 1)[1])
-        _, admission_date = _extract_date(admission_date_text)
-      elif plain.startswith("- 住院时间："):
-        admission_date_text = _clean_field_value(plain.split("：", 1)[1])
-        _, admission_date = _extract_date(admission_date_text)
-      elif plain.startswith("- 出院时间："):
-        discharge_date_text = _clean_field_value(plain.split("：", 1)[1])
-        _, discharge_date = _extract_date(discharge_date_text)
-      elif plain.startswith("- 住院周期："):
-        explicit_period_text = _clean_field_value(plain.split("：", 1)[1])
-      elif plain.startswith("- 当前状态："):
-        admission_status = _clean_field_value(plain.split("：", 1)[1])
-      elif plain.startswith("- 入院原因："):
-        admission_reason = _clean_field_value(plain.split("：", 1)[1])
-      elif plain.startswith("- 本次主要事件："):
-        main_event = _clean_field_value(plain.split("：", 1)[1])
-      elif plain.startswith("- 处置经过："):
-        treatment = _clean_field_value(plain.split("：", 1)[1])
-      elif plain.startswith("- 本次住院主要症状："):
-        symptoms = _clean_field_value(plain.split("：", 1)[1])
-      elif plain.startswith("- 周期内主要症状："):
-        symptoms = _clean_field_value(plain.split("：", 1)[1])
-      elif plain.startswith("- 本次住院后的调药："):
-        medication_change = _clean_field_value(plain.split("：", 1)[1])
-      elif plain.startswith("- 出院结论："):
-        discharge_summary = _clean_field_value(plain.split("：", 1)[1])
-      elif plain.startswith("- 出院情况："):
-        discharge_summary = _clean_field_value(plain.split("：", 1)[1])
-
-    elif section == "labs":
+    if section_role == "labs":
       if indent == 0 and plain.startswith("- ") and stripped.startswith("- **"):
         flush_lab()
         current_lab_name = plain[2:].strip()
       elif indent > 0 and plain.startswith("- ") and current_lab_name:
         current_lab_details.append(plain[2:].strip())
+      continue
+
+    if not plain.startswith("- "):
+      continue
+
+    bullet_text = plain[2:].strip()
+    field_name = ""
+    field_value = ""
+    if "：" in bullet_text:
+      field_name, field_value = bullet_text.split("：", 1)
+      field_name = field_name.strip()
+      field_value = _clean_field_value(field_value)
+
+    handled = False
+    if field_name in {"入院时间", "住院时间"}:
+      admission_date_text = field_value
+      _, admission_date = _extract_date(admission_date_text)
+      handled = True
+    elif field_name == "出院时间":
+      discharge_date_text = field_value
+      _, discharge_date = _extract_date(discharge_date_text)
+      handled = True
+    elif field_name == "住院周期":
+      explicit_period_text = field_value
+      handled = True
+    elif field_name in {"当前状态", "住院状态"}:
+      admission_status = field_value
+      handled = True
+    elif field_name in {"入院原因", "住院原因"}:
+      admission_reason = append_unique(admission_reason, field_value)
+      handled = True
+    elif field_name in {"本次主要事件", "触发事件", "发作经过", "事件经过"}:
+      main_event = append_unique(main_event, field_value)
+      handled = True
+    elif field_name in {"处置经过", "现场处理", "即时处理", "本次主要治疗", "住院处理", "治疗经过"}:
+      treatment = append_unique(treatment, f"{field_name}：{field_value}")
+      handled = True
+    elif field_name in {"本次住院主要症状", "周期内主要症状", "主要症状", "症状特点"}:
+      symptoms = append_unique(symptoms, field_value)
+      handled = True
+    elif field_name in {"本次住院后的调药", "发作后用药调整", "药物调整", "调药情况", "出院用药"}:
+      medication_change = append_unique(medication_change, field_value)
+      handled = True
+    elif field_name in {"出院结论", "出院情况", "出院摘要"}:
+      discharge_summary = append_unique(discharge_summary, field_value)
+      handled = True
+
+    full_bullet = bullet_text
+    if section_role == "event" and not handled:
+      main_event = append_unique(main_event, full_bullet)
+    elif section_role == "medication":
+      medication_change = append_unique(medication_change, full_bullet)
+    elif section_role == "treatment_symptoms":
+      treatment = append_unique(treatment, full_bullet)
+      if any(keyword in full_bullet for keyword in ["症状", "呕吐", "抽动", "意识", "发热", "腹泻", "疼痛"]):
+        symptoms = append_unique(symptoms, full_bullet)
+    elif section_role == "discharge" and not handled:
+      discharge_summary = append_unique(discharge_summary, full_bullet)
+
+    # 自然分节文档中，发作表现和发生背景通常没有固定字段名；保留为主要事件。
+    if section_role == "event" and field_name in {"发生时间", "发生背景", "发作表现"}:
+      main_event = append_unique(main_event, full_bullet)
 
   flush_lab()
 
@@ -845,7 +883,10 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
     medication_change,
     discharge_summary,
   ]
-  period_detail_text = "；".join(part for part in detail_parts if part)
+  period_detail_text = ""
+  for detail_part in detail_parts:
+    for detail_chunk in detail_part.split("；"):
+      period_detail_text = append_unique(period_detail_text, detail_chunk)
 
   if admission_date or admission_date_text:
     admission_periods.append(
@@ -900,6 +941,21 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
       }
     )
 
+  if medication_change:
+    events.append(
+      {
+        "event_date": admission_date,
+        "event_date_text": admission_date_text,
+        "event_time_text": None,
+        "event_type": "medication_adjustment",
+        "title": "本次住院调药",
+        "summary": medication_change,
+        "detail_text": period_detail_text or medication_change,
+        "is_hospitalized": True,
+        "admission_cycle_key": admission_cycle_key,
+      }
+    )
+
   if labs:
     abnormal_labs = [lab["test_name"] for lab in labs if lab["status"] in {"high", "low"}]
     summary = f"本次住院共整理 {len(labs)} 项检查结果"
@@ -942,7 +998,6 @@ def _parse_admission_note(document: DocumentRecord) -> dict[str, list[dict] | di
     "lab_results": labs,
     "admission_periods": admission_periods,
   }
-
 
 def _build_admission_period_text(
   *,
